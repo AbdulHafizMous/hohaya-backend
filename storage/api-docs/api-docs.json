@@ -287,6 +287,168 @@
                     }
                 ]
             }
+        },
+        "/api/notifications/send": {
+            "post": {
+                "tags": [
+                    "Notifications"
+                ],
+                "summary": "Envoyer une notification push FCM",
+                "description": "Envoie une notification push à un appareil via Firebase Cloud Messaging",
+                "operationId": "fa2f8ebe1f207b63870b3b8962f00815",
+                "requestBody": {
+                    "required": true,
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "required": [
+                                    "fcm_token",
+                                    "title",
+                                    "body"
+                                ],
+                                "properties": {
+                                    "fcm_token": {
+                                        "description": "Token FCM de l'appareil destinataire",
+                                        "type": "string",
+                                        "example": "eXXXX..."
+                                    },
+                                    "title": {
+                                        "description": "Titre de la notification",
+                                        "type": "string",
+                                        "example": "Nouvelle commande"
+                                    },
+                                    "body": {
+                                        "description": "Corps de la notification",
+                                        "type": "string",
+                                        "example": "Votre commande a été confirmée"
+                                    },
+                                    "data": {
+                                        "description": "Données supplémentaires (optionnel)",
+                                        "type": "object",
+                                        "example": {
+                                            "route": "/orders/123",
+                                            "order_id": "123"
+                                        }
+                                    }
+                                },
+                                "type": "object"
+                            }
+                        }
+                    }
+                },
+                "responses": {
+                    "200": {
+                        "description": "Notification envoyée avec succès",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "properties": {
+                                        "message": {
+                                            "type": "string",
+                                            "example": "Notification envoyée avec succès"
+                                        },
+                                        "fcm_response": {
+                                            "type": "object"
+                                        }
+                                    },
+                                    "type": "object"
+                                }
+                            }
+                        }
+                    },
+                    "422": {
+                        "description": "Erreur de validation"
+                    },
+                    "500": {
+                        "description": "Erreur serveur FCM"
+                    }
+                },
+                "security": [
+                    {
+                        "sanctum": []
+                    }
+                ]
+            }
+        },
+        "/api/notifications/broadcast": {
+            "post": {
+                "tags": [
+                    "Notifications"
+                ],
+                "summary": "Envoyer une notification à plusieurs appareils",
+                "operationId": "ccd97e7e4766d27eea2eb46ed9c6e8df",
+                "requestBody": {
+                    "required": true,
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "required": [
+                                    "fcm_tokens",
+                                    "title",
+                                    "body"
+                                ],
+                                "properties": {
+                                    "fcm_tokens": {
+                                        "type": "array",
+                                        "items": {
+                                            "type": "string"
+                                        },
+                                        "example": [
+                                            "token1",
+                                            "token2"
+                                        ]
+                                    },
+                                    "title": {
+                                        "type": "string",
+                                        "example": "Promotion"
+                                    },
+                                    "body": {
+                                        "type": "string",
+                                        "example": "Offre spéciale disponible !"
+                                    },
+                                    "data": {
+                                        "type": "object",
+                                        "example": {
+                                            "route": "/promotions"
+                                        }
+                                    }
+                                },
+                                "type": "object"
+                            }
+                        }
+                    }
+                },
+                "responses": {
+                    "200": {
+                        "description": "Notifications envoyées",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "properties": {
+                                        "message": {
+                                            "type": "string"
+                                        },
+                                        "sent": {
+                                            "type": "integer",
+                                            "example": 5
+                                        },
+                                        "failed": {
+                                            "type": "integer",
+                                            "example": 1
+                                        }
+                                    },
+                                    "type": "object"
+                                }
+                            }
+                        }
+                    }
+                },
+                "security": [
+                    {
+                        "sanctum": []
+                    }
+                ]
+            }
         }
     },
     "components": {
@@ -302,6 +464,10 @@
         {
             "name": "Authentication",
             "description": "API Endpoints for user authentication"
+        },
+        {
+            "name": "Notifications",
+            "description": "Notifications"
         }
     ]
 }
