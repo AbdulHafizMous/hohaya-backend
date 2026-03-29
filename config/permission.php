@@ -131,6 +131,10 @@ return [
      * (view the latest version of this package's migration file)
      */
 
+    'defaults' => [
+        'guard' => 'api',
+    ],
+
     'teams' => false,
 
     /*

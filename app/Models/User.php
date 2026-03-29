@@ -9,6 +9,7 @@ namespace App\Models;
 use Carbon\Carbon;
 use Illuminate\Database\Eloquent\Collection;
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Contracts\Auth\MustVerifyEmail;
 use Illuminate\Database\Eloquent\SoftDeletes;
 use Illuminate\Foundation\Auth\User as Authenticatable;
 use Illuminate\Notifications\Notifiable;
@@ -54,93 +55,101 @@ use Spatie\Permission\Traits\HasRoles;
  *
  * @package App\Models
  */
-class User extends Authenticatable
+class User extends Authenticatable implements MustVerifyEmail
 {
-	use HasRoles, SoftDeletes, HasApiTokens, HasFactory, Notifiable;
-	protected $table = 'users';
+    use HasRoles, SoftDeletes, HasApiTokens, HasFactory, Notifiable;
 
-	protected $casts = [
-		'email_verified_at' => 'datetime',
-		'is_suscribed' => 'bool',
-		'subscription_start' => 'datetime',
-		'subscription_end' => 'datetime',
-		'is_verified' => 'bool',
-		'deleted_by' => 'int',
-		'created_by' => 'int',
-		'updated_by' => 'int'
-	];
+    protected string $guard_name = 'api';
 
-	protected $hidden = [
-		'password',
-		'remember_token'
-	];
+    protected $table = 'users';
 
-	protected $fillable = [
-		'name',
-		'email',
-		'phone',
-		'email_verified_at',
-		'avatar',
-		'preferences',
-		'adress',
-		'is_suscribed',
-		'subscription_start',
-		'subscription_end',
-		'is_verified',
-		'password',
-		'remember_token',
-		'deleted_by',
-		'created_by',
-		'updated_by'
-	];
+    protected $casts = [
+        'email_verified_at' => 'datetime',
+        'is_suscribed'      => 'boolean',
+        'subscription_start' => 'datetime',
+        'subscription_end'   => 'datetime',
+        'is_verified'       => 'boolean',
+        'deleted_by'        => 'integer',
+        'created_by'        => 'integer',
+        'updated_by'        => 'integer',
+    ];
 
-	public function user()
-	{
-		return $this->belongsTo(User::class, 'updated_by');
-	}
+    protected $hidden = [
+        'password',
+        'remember_token',
+    ];
 
-	public function abonnements()
-	{
-		return $this->hasMany(Abonnement::class, 'updated_by');
-	}
+    protected $fillable = [
+        'name',
+        'email',
+        'phone',
+        'password',
+        'avatar',
+        'preferences',
+        'adress',
+        'is_suscribed',
+        'subscription_start',
+        'subscription_end',
+        'is_verified',
+        'email_verified_at',
+        'remember_token',
+        'deleted_by',
+        'created_by',
+        'updated_by',
+    ];
 
-	public function access_contacts()
-	{
-		return $this->hasMany(AccessContact::class, 'updated_by');
-	}
 
-	public function images_properties()
-	{
-		return $this->hasMany(ImagesProperty::class, 'updated_by');
-	}
+    // ─── Relations métier (préparation Phase 3+) ──────────────────────
+    public function properties()
+    {
+        return $this->hasMany(Property::class, 'user_id');
+    }
 
-	public function packaccesses()
-	{
-		return $this->hasMany(Packaccess::class, 'updated_by');
-	}
+    public function paiements()
+    {
+        return $this->hasMany(Paiement::class, 'user_id');
+    }
 
-	public function paiements()
-	{
-		return $this->hasMany(Paiement::class, 'updated_by');
-	}
+    public function abonnements()
+    {
+        return $this->hasMany(Abonnement::class, 'user_id');
+    }
 
-	public function properties()
-	{
-		return $this->hasMany(Property::class, 'updated_by');
-	}
+    public function accessContacts()
+    {
+        return $this->hasMany(AccessContact::class, 'user_id');
+    }
 
-	public function signalements()
-	{
-		return $this->hasMany(Signalement::class, 'updated_by');
-	}
+    public function signalements()
+    {
+        return $this->hasMany(Signalement::class, 'user_id');
+    }
 
-	public function supports_tickets()
-	{
-		return $this->hasMany(SupportsTicket::class, 'updated_by');
-	}
+    public function supportsTickets()
+    {
+        return $this->hasMany(SupportsTicket::class, 'user_id');
+    }
 
-	public function users()
-	{
-		return $this->hasMany(User::class, 'updated_by');
-	}
+    // ─── Helpers ─────────────────────────────────────────────────────
+    public function isOwner(): bool
+    {
+        return $this->hasRole('owner');
+    }
+
+    public function isSeeker(): bool
+    {
+        return $this->hasRole('seeker');
+    }
+
+    public function isAdmin(): bool
+    {
+        return $this->hasRole('admin');
+    }
+
+    public function hasActiveSubscription(): bool
+    {
+        return $this->is_suscribed
+            && $this->subscription_end
+            && $this->subscription_end->isFuture();
+    }
 }
