@@ -1,60 +1,53 @@
 <?php
 
-/**
- * Created by Reliese Model.
- */
-
 namespace App\Models;
 
-use Carbon\Carbon;
+use App\Enums\SignalementStatus;
+use App\Enums\SignalementType;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\SoftDeletes;
 
-/**
- * Class Signalement
- * 
- * @property int $id
- * @property int $id_user
- * @property string $motif
- * @property string $description
- * @property string $type_signalement
- * @property string $status
- * @property string|null $deleted_at
- * @property int|null $deleted_by
- * @property int|null $created_by
- * @property int|null $updated_by
- * @property Carbon|null $created_at
- * @property Carbon|null $updated_at
- * 
- * @property User|null $user
- *
- * @package App\Models
- */
 class Signalement extends Model
 {
-	use SoftDeletes;
-	protected $table = 'signalements';
+    use SoftDeletes;
 
-	protected $casts = [
-		'id_user' => 'int',
-		'deleted_by' => 'int',
-		'created_by' => 'int',
-		'updated_by' => 'int'
-	];
+    protected $table = 'signalements';
 
-	protected $fillable = [
-		'id_user',
-		'motif',
-		'description',
-		'type_signalement',
-		'status',
-		'deleted_by',
-		'created_by',
-		'updated_by'
-	];
+    protected $casts = [
+        'id_user'          => 'integer',
+        'id_property'      => 'integer',
+        'id_user_signale'  => 'integer',
+        'traite_par'       => 'integer',
+        'traite_le'        => 'datetime',
+        'deleted_by'       => 'integer',
+        'created_by'       => 'integer',
+        'updated_by'       => 'integer',
+    ];
 
-	public function user()
-	{
-		return $this->belongsTo(User::class, 'id_user');
-	}
+    protected $fillable = [
+        'id_user', 'id_property', 'id_user_signale',
+        'motif', 'description', 'type_signalement', 'status',
+        'note_admin', 'traite_par', 'traite_le',
+        'deleted_by', 'created_by', 'updated_by',
+    ];
+
+    public function user()
+    {
+        return $this->belongsTo(User::class, 'id_user');
+    }
+
+    public function property()
+    {
+        return $this->belongsTo(Property::class, 'id_property');
+    }
+
+    public function userSignale()
+    {
+        return $this->belongsTo(User::class, 'id_user_signale');
+    }
+
+    public function adminTraitant()
+    {
+        return $this->belongsTo(User::class, 'traite_par');
+    }
 }

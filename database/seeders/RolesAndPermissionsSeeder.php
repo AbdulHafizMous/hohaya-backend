@@ -16,22 +16,21 @@ class RolesAndPermissionsSeeder extends Seeder
 
         // ── Permissions ──────────────────────────────────────────────────
         $permissions = [
-            // Annonces
+            // Phase 2
             'property.create',
             'property.update',
             'property.delete',
             'property.view',
-
-            // Contacts
             'contact.unlock',
-
+            // Phase 3
+            'property.verify',
+            'support.manage',
+            'signalement.manage',
             // Admin
             'admin.dashboard',
             'admin.users.manage',
             'admin.properties.moderate',
             'admin.complaints.manage',
-
-            // Abonnements
             'subscription.manage',
         ];
 
