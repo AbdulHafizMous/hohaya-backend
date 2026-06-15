@@ -45,12 +45,11 @@ use Spatie\Permission\Traits\HasRoles;
  * @property User|null $user
  * @property Collection|Abonnement[] $abonnements
  * @property Collection|AccessContact[] $access_contacts
- * @property Collection|ImagesProperty[] $images_properties
  * @property Collection|Packaccess[] $packaccesses
  * @property Collection|Paiement[] $paiements
  * @property Collection|Property[] $properties
  * @property Collection|Signalement[] $signalements
- * @property Collection|SupportsTicket[] $supports_tickets
+ * @property Collection|SupportTicket[] $supports_tickets
  * @property Collection|User[] $users
  *
  * @package App\Models
@@ -127,7 +126,7 @@ class User extends Authenticatable implements MustVerifyEmail
 
     public function supportsTickets()
     {
-        return $this->hasMany(SupportsTicket::class, 'user_id');
+        return $this->hasMany(SupportTicket::class, 'user_id');
     }
 
     // ─── Helpers ─────────────────────────────────────────────────────

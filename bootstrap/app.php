@@ -1,14 +1,15 @@
 <?php
 
+use App\Http\Middleware\CheckAbonnementActif;
+use Illuminate\Auth\AuthenticationException;
+use Illuminate\Database\Eloquent\ModelNotFoundException;
 use Illuminate\Foundation\Application;
 use Illuminate\Foundation\Configuration\Exceptions;
 use Illuminate\Foundation\Configuration\Middleware;
-use Illuminate\Auth\AuthenticationException;
-use Illuminate\Validation\ValidationException;
-use Illuminate\Database\Eloquent\ModelNotFoundException;
 use Illuminate\Http\Request;
-use Symfony\Component\HttpKernel\Exception\NotFoundHttpException;
+use Illuminate\Validation\ValidationException;
 use Symfony\Component\HttpKernel\Exception\MethodNotAllowedHttpException;
+use Symfony\Component\HttpKernel\Exception\NotFoundHttpException;
 
 return Application::configure(basePath: dirname(__DIR__))
     ->withRouting(
@@ -18,7 +19,9 @@ return Application::configure(basePath: dirname(__DIR__))
         health: '/up',
     )
     ->withMiddleware(function (Middleware $middleware): void {
-        //
+        $middleware->alias([
+            'abonnement.actif' => CheckAbonnementActif::class,
+        ]);
     })
     ->withExceptions(function (Exceptions $exceptions) {
 
@@ -27,7 +30,7 @@ return Application::configure(basePath: dirname(__DIR__))
             return response()->json([
                 'success' => false,
                 'message' => 'Non authentifié. Veuillez vous connecter.',
-                'data'    => null,
+                'data' => null,
             ], 401);
         });
 
@@ -36,7 +39,7 @@ return Application::configure(basePath: dirname(__DIR__))
             return response()->json([
                 'success' => false,
                 'message' => 'Données invalides.',
-                'data'    => ['errors' => $e->errors()],
+                'data' => ['errors' => $e->errors()],
             ], 422);
         });
 
@@ -45,7 +48,7 @@ return Application::configure(basePath: dirname(__DIR__))
             return response()->json([
                 'success' => false,
                 'message' => 'Ressource introuvable.',
-                'data'    => null,
+                'data' => null,
             ], 404);
         });
 
@@ -54,7 +57,7 @@ return Application::configure(basePath: dirname(__DIR__))
             return response()->json([
                 'success' => false,
                 'message' => 'Route introuvable.',
-                'data'    => null,
+                'data' => null,
             ], 404);
         });
 
@@ -63,19 +66,19 @@ return Application::configure(basePath: dirname(__DIR__))
             return response()->json([
                 'success' => false,
                 'message' => 'Méthode HTTP non autorisée.',
-                'data'    => null,
+                'data' => null,
             ], 405);
         });
 
         // Toute autre erreur → 500
-        $exceptions->render(function (\Throwable $e, Request $request) {
+        $exceptions->render(function (Throwable $e, Request $request) {
             if ($request->is('api/*') || $request->expectsJson()) {
                 return response()->json([
                     'success' => false,
                     'message' => app()->isProduction()
                         ? 'Une erreur interne est survenue. Veuillez réessayer.'
                         : $e->getMessage(),
-                    'data'    => null,
+                    'data' => null,
                 ], 500);
             }
         });

@@ -12,6 +12,167 @@
         }
     ],
     "paths": {
+        "/api/abonnements/tarifs": {
+            "get": {
+                "tags": [
+                    "Abonnements"
+                ],
+                "summary": "Liste des tarifs d'abonnement disponibles (public)",
+                "operationId": "bfaf0d756fef11d35dfbbb55eb7ffaef",
+                "responses": {
+                    "200": {
+                        "description": "Tarifs disponibles"
+                    }
+                }
+            }
+        },
+        "/api/abonnements/actif": {
+            "get": {
+                "tags": [
+                    "Abonnements"
+                ],
+                "summary": "Mon abonnement actif",
+                "operationId": "ff4245e63cf01121e432aaefe88643c7",
+                "responses": {
+                    "200": {
+                        "description": "Abonnement actif ou null"
+                    }
+                },
+                "security": [
+                    {
+                        "sanctum": []
+                    }
+                ]
+            }
+        },
+        "/api/abonnements/historique": {
+            "get": {
+                "tags": [
+                    "Abonnements"
+                ],
+                "summary": "Historique de mes abonnements",
+                "operationId": "649c9f63818c0027ebebc494a621ec05",
+                "parameters": [
+                    {
+                        "name": "per_page",
+                        "in": "query",
+                        "required": false,
+                        "schema": {
+                            "type": "integer",
+                            "default": 15
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Historique des abonnements"
+                    }
+                },
+                "security": [
+                    {
+                        "sanctum": []
+                    }
+                ]
+            }
+        },
+        "/api/abonnements/initier": {
+            "post": {
+                "tags": [
+                    "Abonnements"
+                ],
+                "summary": "Initier un abonnement (étape 1 — avant paiement KKiaPay)",
+                "description": "Crée un abonnement en attente et retourne les informations nécessaires au SDK KKiaPay côté frontend.",
+                "operationId": "a4a356bce26a5afb6496bc9784259d29",
+                "requestBody": {
+                    "required": true,
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "required": [
+                                    "type"
+                                ],
+                                "properties": {
+                                    "type": {
+                                        "description": "Type d'abonnement souhaité",
+                                        "type": "string",
+                                        "example": "mensuel",
+                                        "enum": [
+                                            "mensuel",
+                                            "trimestriel",
+                                            "semestriel",
+                                            "annuel"
+                                        ]
+                                    }
+                                },
+                                "type": "object"
+                            }
+                        }
+                    }
+                },
+                "responses": {
+                    "200": {
+                        "description": "Abonnement initié. Utilisez kkiapay_public_key + montant pour payer via le SDK KKiaPay."
+                    },
+                    "422": {
+                        "description": "Abonnement déjà actif ou type invalide"
+                    }
+                },
+                "security": [
+                    {
+                        "sanctum": []
+                    }
+                ]
+            }
+        },
+        "/api/abonnements/confirmer": {
+            "post": {
+                "tags": [
+                    "Abonnements"
+                ],
+                "summary": "Confirmer un abonnement après paiement KKiaPay (étape 2)",
+                "description": "À appeler après que le SDK KKiaPay a retourné un transaction_id. Le backend vérifie la transaction auprès de KKiaPay et active l'abonnement.",
+                "operationId": "9874af401cbf1cd063266d5af74ab1c7",
+                "requestBody": {
+                    "required": true,
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "required": [
+                                    "paiement_id",
+                                    "transaction_id"
+                                ],
+                                "properties": {
+                                    "paiement_id": {
+                                        "description": "ID du paiement retourné par /api/abonnements/initier",
+                                        "type": "integer",
+                                        "example": 5
+                                    },
+                                    "transaction_id": {
+                                        "description": "Transaction ID retourné par le SDK KKiaPay après paiement réussi",
+                                        "type": "string",
+                                        "example": "kkp_txn_abc123def456"
+                                    }
+                                },
+                                "type": "object"
+                            }
+                        }
+                    }
+                },
+                "responses": {
+                    "200": {
+                        "description": "Abonnement activé avec succès"
+                    },
+                    "422": {
+                        "description": "Paiement invalide ou transaction KKiaPay non confirmée"
+                    }
+                },
+                "security": [
+                    {
+                        "sanctum": []
+                    }
+                ]
+            }
+        },
         "/api/auth/register": {
             "post": {
                 "tags": [
@@ -353,6 +514,127 @@
                 ]
             }
         },
+        "/api/contacts/initier": {
+            "post": {
+                "tags": [
+                    "Contacts"
+                ],
+                "summary": "Initier le déblocage d'un contact propriétaire (étape 1)",
+                "description": "Si l'utilisateur a déjà payé, retourne directement le contact. Sinon, retourne les infos de paiement KKiaPay.",
+                "operationId": "6a52ab25ead51dd3afcb30f987c8861d",
+                "requestBody": {
+                    "required": true,
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "required": [
+                                    "property_id"
+                                ],
+                                "properties": {
+                                    "property_id": {
+                                        "description": "ID de l'annonce dont on veut débloquer le contact",
+                                        "type": "integer",
+                                        "example": 3
+                                    }
+                                },
+                                "type": "object"
+                            }
+                        }
+                    }
+                },
+                "responses": {
+                    "200": {
+                        "description": "Contact retourné directement (déjà payé) ou informations de paiement KKiaPay"
+                    },
+                    "422": {
+                        "description": "Annonce invalide"
+                    }
+                },
+                "security": [
+                    {
+                        "sanctum": []
+                    }
+                ]
+            }
+        },
+        "/api/contacts/confirmer": {
+            "post": {
+                "tags": [
+                    "Contacts"
+                ],
+                "summary": "Confirmer le paiement et obtenir le contact (étape 2)",
+                "operationId": "a18ab7e3cd3b47cf72bf6a6fafcd5d11",
+                "requestBody": {
+                    "required": true,
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "required": [
+                                    "paiement_id",
+                                    "transaction_id"
+                                ],
+                                "properties": {
+                                    "paiement_id": {
+                                        "description": "ID du paiement retourné par /api/contacts/initier",
+                                        "type": "integer",
+                                        "example": 12
+                                    },
+                                    "transaction_id": {
+                                        "description": "Transaction ID KKiaPay après paiement réussi",
+                                        "type": "string",
+                                        "example": "kkp_txn_xyz789"
+                                    }
+                                },
+                                "type": "object"
+                            }
+                        }
+                    }
+                },
+                "responses": {
+                    "200": {
+                        "description": "Contact du propriétaire débloqué"
+                    },
+                    "422": {
+                        "description": "Paiement invalide"
+                    }
+                },
+                "security": [
+                    {
+                        "sanctum": []
+                    }
+                ]
+            }
+        },
+        "/api/contacts/historique": {
+            "get": {
+                "tags": [
+                    "Contacts"
+                ],
+                "summary": "Historique des contacts débloqués",
+                "operationId": "c61f159e82888329a51547c1b0636fc5",
+                "parameters": [
+                    {
+                        "name": "per_page",
+                        "in": "query",
+                        "required": false,
+                        "schema": {
+                            "type": "integer",
+                            "default": 15
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Historique des contacts débloqués"
+                    }
+                },
+                "security": [
+                    {
+                        "sanctum": []
+                    }
+                ]
+            }
+        },
         "/api/notifications/send": {
             "post": {
                 "tags": [
@@ -506,6 +788,85 @@
                                 }
                             }
                         }
+                    }
+                },
+                "security": [
+                    {
+                        "sanctum": []
+                    }
+                ]
+            }
+        },
+        "/api/paiements": {
+            "get": {
+                "tags": [
+                    "Paiements"
+                ],
+                "summary": "Mon historique de paiements",
+                "operationId": "45af35b5fb96091b05cb3dbf19d58478",
+                "parameters": [
+                    {
+                        "name": "per_page",
+                        "in": "query",
+                        "required": false,
+                        "schema": {
+                            "type": "integer",
+                            "default": 15
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Historique des paiements"
+                    }
+                },
+                "security": [
+                    {
+                        "sanctum": []
+                    }
+                ]
+            }
+        },
+        "/api/admin/paiements": {
+            "get": {
+                "tags": [
+                    "Paiements"
+                ],
+                "summary": "Tous les paiements (admin)",
+                "operationId": "ba11a3f97058cea4dc6137fde86bf4c9",
+                "parameters": [
+                    {
+                        "name": "status",
+                        "in": "query",
+                        "required": false,
+                        "schema": {
+                            "type": "string"
+                        }
+                    },
+                    {
+                        "name": "type",
+                        "in": "query",
+                        "required": false,
+                        "schema": {
+                            "type": "string"
+                        }
+                    },
+                    {
+                        "name": "per_page",
+                        "in": "query",
+                        "required": false,
+                        "schema": {
+                            "type": "integer",
+                            "default": 15
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Tous les paiements"
+                    },
+                    "403": {
+                        "description": "Non autorisé"
                     }
                 },
                 "security": [
@@ -2108,8 +2469,20 @@
     },
     "tags": [
         {
+            "name": "Abonnements",
+            "description": "Gestion des abonnements propriétaires"
+        },
+        {
             "name": "Authentication",
             "description": "Endpoints d'authentification"
+        },
+        {
+            "name": "Contacts",
+            "description": "Déblocage des contacts propriétaires"
+        },
+        {
+            "name": "Paiements",
+            "description": "Historique et gestion des paiements"
         },
         {
             "name": "Properties",
