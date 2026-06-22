@@ -53,6 +53,16 @@ class Property extends Model
         return $this->hasMany(AccessContact::class, 'id_property');
     }
 
+    public function favoris()
+    {
+        return $this->hasMany(Favori::class, 'id_property');
+    }
+
+    public function visites()
+    {
+        return $this->hasMany(Visite::class, 'id_property');
+    }
+
     // Tous les médias, triés par ordre
     public function medias()
     {

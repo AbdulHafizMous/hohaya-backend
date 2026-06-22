@@ -173,6 +173,299 @@
                 ]
             }
         },
+        "/api/admin/dashboard": {
+            "get": {
+                "tags": [
+                    "Admin"
+                ],
+                "summary": "Statistiques globales du dashboard admin",
+                "operationId": "a4e953abeda97cdeaa1c2af786aea1f3",
+                "responses": {
+                    "200": {
+                        "description": "Statistiques globales"
+                    },
+                    "403": {
+                        "description": "Non autorisé"
+                    }
+                },
+                "security": [
+                    {
+                        "sanctum": []
+                    }
+                ]
+            }
+        },
+        "/api/admin/revenus/mensuel": {
+            "get": {
+                "tags": [
+                    "Admin"
+                ],
+                "summary": "Revenus mensuels sur les 12 derniers mois",
+                "operationId": "c8aedf19608fd557c222ee41d332b9e7",
+                "responses": {
+                    "200": {
+                        "description": "Revenus par mois"
+                    }
+                },
+                "security": [
+                    {
+                        "sanctum": []
+                    }
+                ]
+            }
+        },
+        "/api/admin/users": {
+            "get": {
+                "tags": [
+                    "Admin"
+                ],
+                "summary": "Liste de tous les utilisateurs",
+                "operationId": "8734f0eb21eaec99b614d902ba09f030",
+                "parameters": [
+                    {
+                        "name": "role",
+                        "in": "query",
+                        "description": "Filtrer par rôle",
+                        "required": false,
+                        "schema": {
+                            "type": "string",
+                            "enum": [
+                                "owner",
+                                "seeker",
+                                "admin"
+                            ]
+                        }
+                    },
+                    {
+                        "name": "search",
+                        "in": "query",
+                        "description": "Recherche par nom, email ou téléphone",
+                        "required": false,
+                        "schema": {
+                            "type": "string"
+                        }
+                    },
+                    {
+                        "name": "is_verified",
+                        "in": "query",
+                        "description": "Filtrer par statut de vérification",
+                        "required": false,
+                        "schema": {
+                            "type": "boolean"
+                        }
+                    },
+                    {
+                        "name": "deleted",
+                        "in": "query",
+                        "description": "Afficher uniquement les comptes supprimés",
+                        "required": false,
+                        "schema": {
+                            "type": "boolean"
+                        }
+                    },
+                    {
+                        "name": "per_page",
+                        "in": "query",
+                        "required": false,
+                        "schema": {
+                            "type": "integer",
+                            "default": 20
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Liste des utilisateurs"
+                    }
+                },
+                "security": [
+                    {
+                        "sanctum": []
+                    }
+                ]
+            }
+        },
+        "/api/admin/users/{id}/verify": {
+            "patch": {
+                "tags": [
+                    "Admin"
+                ],
+                "summary": "Vérifier ou retirer la vérification d'un propriétaire",
+                "operationId": "14dba836d0c4ad63dee90222114d1a3e",
+                "parameters": [
+                    {
+                        "name": "id",
+                        "in": "path",
+                        "description": "ID de l'utilisateur",
+                        "required": true,
+                        "schema": {
+                            "type": "integer",
+                            "example": 5
+                        }
+                    }
+                ],
+                "requestBody": {
+                    "required": true,
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "required": [
+                                    "is_verified"
+                                ],
+                                "properties": {
+                                    "is_verified": {
+                                        "description": "true = vérifier, false = retirer la vérification",
+                                        "type": "boolean",
+                                        "example": true
+                                    }
+                                },
+                                "type": "object"
+                            }
+                        }
+                    }
+                },
+                "responses": {
+                    "200": {
+                        "description": "Vérification mise à jour"
+                    },
+                    "422": {
+                        "description": "Utilisateur non propriétaire"
+                    }
+                },
+                "security": [
+                    {
+                        "sanctum": []
+                    }
+                ]
+            }
+        },
+        "/api/admin/users/{id}/suspension": {
+            "patch": {
+                "tags": [
+                    "Admin"
+                ],
+                "summary": "Suspendre ou réactiver un compte utilisateur",
+                "operationId": "f2bb2ce1610dcb16da2935232b491101",
+                "parameters": [
+                    {
+                        "name": "id",
+                        "in": "path",
+                        "required": true,
+                        "schema": {
+                            "type": "integer",
+                            "example": 5
+                        }
+                    }
+                ],
+                "requestBody": {
+                    "required": true,
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "required": [
+                                    "suspendre"
+                                ],
+                                "properties": {
+                                    "suspendre": {
+                                        "description": "true = suspendre le compte, false = réactiver",
+                                        "type": "boolean",
+                                        "example": true
+                                    }
+                                },
+                                "type": "object"
+                            }
+                        }
+                    }
+                },
+                "responses": {
+                    "200": {
+                        "description": "Compte suspendu ou réactivé"
+                    },
+                    "422": {
+                        "description": "Utilisateur introuvable"
+                    }
+                },
+                "security": [
+                    {
+                        "sanctum": []
+                    }
+                ]
+            }
+        },
+        "/api/admin/properties/pending": {
+            "get": {
+                "tags": [
+                    "Admin"
+                ],
+                "summary": "Annonces en attente de modération",
+                "operationId": "cbd78c065af53441afd6d2409864098e",
+                "parameters": [
+                    {
+                        "name": "per_page",
+                        "in": "query",
+                        "required": false,
+                        "schema": {
+                            "type": "integer",
+                            "default": 20
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Annonces à modérer"
+                    }
+                },
+                "security": [
+                    {
+                        "sanctum": []
+                    }
+                ]
+            }
+        },
+        "/api/admin/export/paiements": {
+            "get": {
+                "tags": [
+                    "Admin"
+                ],
+                "summary": "Exporter les paiements en CSV",
+                "operationId": "6bf916e6b3d82f1679febe821469b8cf",
+                "responses": {
+                    "200": {
+                        "description": "Fichier CSV des paiements"
+                    },
+                    "403": {
+                        "description": "Non autorisé"
+                    }
+                },
+                "security": [
+                    {
+                        "sanctum": []
+                    }
+                ]
+            }
+        },
+        "/api/admin/export/users": {
+            "get": {
+                "tags": [
+                    "Admin"
+                ],
+                "summary": "Exporter les utilisateurs en CSV",
+                "operationId": "a2e10752344944b1099680b20731d000",
+                "responses": {
+                    "200": {
+                        "description": "Fichier CSV des utilisateurs"
+                    },
+                    "403": {
+                        "description": "Non autorisé"
+                    }
+                },
+                "security": [
+                    {
+                        "sanctum": []
+                    }
+                ]
+            }
+        },
         "/api/auth/register": {
             "post": {
                 "tags": [
@@ -505,6 +798,280 @@
                 "responses": {
                     "200": {
                         "description": "Email renvoyé"
+                    }
+                },
+                "security": [
+                    {
+                        "sanctum": []
+                    }
+                ]
+            }
+        },
+        "/api/chercheur/favoris/{propertyId}": {
+            "post": {
+                "tags": [
+                    "Chercheur"
+                ],
+                "summary": "Ajouter ou retirer une annonce des favoris (toggle)",
+                "operationId": "37d20969e0c515a9863fb626fce59975",
+                "parameters": [
+                    {
+                        "name": "propertyId",
+                        "in": "path",
+                        "description": "ID de l'annonce",
+                        "required": true,
+                        "schema": {
+                            "type": "integer",
+                            "example": 3
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Favori ajouté ou retiré"
+                    },
+                    "404": {
+                        "description": "Annonce introuvable"
+                    }
+                },
+                "security": [
+                    {
+                        "sanctum": []
+                    }
+                ]
+            }
+        },
+        "/api/chercheur/favoris": {
+            "get": {
+                "tags": [
+                    "Chercheur"
+                ],
+                "summary": "Mes annonces favorites",
+                "operationId": "d0d11e1c568c3b9f6e137ee57a124192",
+                "parameters": [
+                    {
+                        "name": "per_page",
+                        "in": "query",
+                        "required": false,
+                        "schema": {
+                            "type": "integer",
+                            "default": 15
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Liste des favoris"
+                    }
+                },
+                "security": [
+                    {
+                        "sanctum": []
+                    }
+                ]
+            }
+        },
+        "/api/chercheur/visites": {
+            "get": {
+                "tags": [
+                    "Chercheur"
+                ],
+                "summary": "Mes demandes de visite",
+                "operationId": "0e27e1dac0c564454efddc3698fbe360",
+                "parameters": [
+                    {
+                        "name": "per_page",
+                        "in": "query",
+                        "required": false,
+                        "schema": {
+                            "type": "integer",
+                            "default": 15
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Mes demandes de visite"
+                    }
+                },
+                "security": [
+                    {
+                        "sanctum": []
+                    }
+                ]
+            },
+            "post": {
+                "tags": [
+                    "Chercheur"
+                ],
+                "summary": "Demander une visite pour une annonce",
+                "operationId": "a167b82e847baaebe45decd9cefcbbc6",
+                "requestBody": {
+                    "required": true,
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "required": [
+                                    "id_property",
+                                    "date_souhaitee"
+                                ],
+                                "properties": {
+                                    "id_property": {
+                                        "description": "ID de l'annonce à visiter",
+                                        "type": "integer",
+                                        "example": 5
+                                    },
+                                    "date_souhaitee": {
+                                        "description": "Date et heure souhaitées pour la visite",
+                                        "type": "string",
+                                        "format": "date-time",
+                                        "example": "2026-07-15 10:00:00"
+                                    },
+                                    "message": {
+                                        "type": "string",
+                                        "example": "Je suis disponible le matin de préférence.",
+                                        "nullable": true
+                                    }
+                                },
+                                "type": "object"
+                            }
+                        }
+                    }
+                },
+                "responses": {
+                    "201": {
+                        "description": "Demande de visite envoyée"
+                    },
+                    "422": {
+                        "description": "Données invalides ou demande déjà existante"
+                    }
+                },
+                "security": [
+                    {
+                        "sanctum": []
+                    }
+                ]
+            }
+        },
+        "/api/chercheur/visites/{id}/annuler": {
+            "patch": {
+                "tags": [
+                    "Chercheur"
+                ],
+                "summary": "Annuler une demande de visite",
+                "operationId": "813375ad9318d6c762ae46012f0b7b7b",
+                "parameters": [
+                    {
+                        "name": "id",
+                        "in": "path",
+                        "required": true,
+                        "schema": {
+                            "type": "integer"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Visite annulée"
+                    },
+                    "422": {
+                        "description": "Visite introuvable ou non annulable"
+                    }
+                },
+                "security": [
+                    {
+                        "sanctum": []
+                    }
+                ]
+            }
+        },
+        "/api/owner/visites": {
+            "get": {
+                "tags": [
+                    "Chercheur"
+                ],
+                "summary": "Visites reçues sur mes annonces (owner)",
+                "operationId": "9c860354cd318230251943776bde341e",
+                "parameters": [
+                    {
+                        "name": "per_page",
+                        "in": "query",
+                        "required": false,
+                        "schema": {
+                            "type": "integer",
+                            "default": 15
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Visites reçues"
+                    },
+                    "403": {
+                        "description": "Réservé aux propriétaires"
+                    }
+                },
+                "security": [
+                    {
+                        "sanctum": []
+                    }
+                ]
+            }
+        },
+        "/api/owner/visites/{id}/repondre": {
+            "patch": {
+                "tags": [
+                    "Chercheur"
+                ],
+                "summary": "Confirmer ou refuser une visite (owner)",
+                "operationId": "4ad8cda6ae9c972dbfa9183a0aa3d887",
+                "parameters": [
+                    {
+                        "name": "id",
+                        "in": "path",
+                        "required": true,
+                        "schema": {
+                            "type": "integer"
+                        }
+                    }
+                ],
+                "requestBody": {
+                    "required": true,
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "required": [
+                                    "status"
+                                ],
+                                "properties": {
+                                    "status": {
+                                        "type": "string",
+                                        "example": "confirmée",
+                                        "enum": [
+                                            "confirmée",
+                                            "refusée"
+                                        ]
+                                    },
+                                    "note_proprietaire": {
+                                        "type": "string",
+                                        "example": "Rendez-vous confirmé. Je vous attends à 10h.",
+                                        "nullable": true
+                                    }
+                                },
+                                "type": "object"
+                            }
+                        }
+                    }
+                },
+                "responses": {
+                    "200": {
+                        "description": "Réponse envoyée"
+                    },
+                    "403": {
+                        "description": "Non autorisé"
+                    },
+                    "422": {
+                        "description": "Visite introuvable"
                     }
                 },
                 "security": [
@@ -2473,8 +3040,16 @@
             "description": "Gestion des abonnements propriétaires"
         },
         {
+            "name": "Admin",
+            "description": "Back-office administrateur"
+        },
+        {
             "name": "Authentication",
             "description": "Endpoints d'authentification"
+        },
+        {
+            "name": "Chercheur",
+            "description": "Fonctionnalités pour les chercheurs de logement"
         },
         {
             "name": "Contacts",

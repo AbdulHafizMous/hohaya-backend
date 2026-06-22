@@ -13,6 +13,6 @@ class VerifierAbonnementsExpires extends Command
     public function handle(AbonnementService $abonnementService): void
     {
         $count = $abonnementService->verifierExpirations();
-        $this->info("~ {$count} abonnement(s) expiré(s) traités.");
+        $this->info("✅ {$count} abonnement(s) expiré(s) traités.");
     }
 }
