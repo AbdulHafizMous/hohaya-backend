@@ -21,5 +21,21 @@ use OpenApi\Attributes as OA;
 )]
 abstract class Controller
 {
-    //
+     /**
+     * Send a standardized API response.
+     *
+     * @param  mixed  $data  The data to include in the response.
+     * @param  string|null  $message  An optional message to include in the response.
+     * @param  bool  $success  Indicates whether the request was successful (default is true).
+     * @param  int  $status  The HTTP status code for the response (default is 200).
+     * @return \Illuminate\Http\JsonResponse
+     */
+    public function sendApiResponse($data = null, $message = null, $success = true, $status = 200)
+    {
+        return response()->json([
+            'success' => $success,
+            'data' => $data,
+            'message' => $message,
+        ], $status);
+    }
 }

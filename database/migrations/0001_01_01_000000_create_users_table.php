@@ -14,13 +14,27 @@ return new class extends Migration {
             $table->id();
             $table->string('name');
             $table->string('email')->unique();
+            $table->string('phone')->unique()->nullable();
             $table->timestamp('email_verified_at')->nullable();
+            $table->string('avatar')->nullable();
+            $table->string('preferences')->nullable();
+            $table->string('adress')->nullable();
+            $table->boolean('is_suscribed')->default(false);
+            $table->dateTime('subscription_start')->nullable();
+            $table->dateTime('subscription_end')->nullable();
+            $table->boolean('is_verified')->default(false);
             $table->string('password');
             $table->rememberToken();
+
+            $table->softDeletes();
+            $table->unsignedBigInteger('deleted_by')->nullable();
+            $table->unsignedBigInteger('created_by')->nullable();
+            $table->unsignedBigInteger('updated_by')->nullable();
             $table->timestamps();
-            $table->string('phone')->nullable()->unique();
-            $table->enum('role', ['admin', 'owner', 'seeker'])->default('seeker');
-            $table->boolean('is_verified')->default(false);
+            $table->foreign('deleted_by')->references('id')->on('users')->onDelete('restrict');
+            $table->foreign('created_by')->references('id')->on('users')->onDelete('restrict');
+            $table->foreign('updated_by')->references('id')->on('users')->onDelete('restrict');
+
         });
 
         Schema::create('password_reset_tokens', function (Blueprint $table) {

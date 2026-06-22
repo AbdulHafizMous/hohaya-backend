@@ -12,12 +12,466 @@
         }
     ],
     "paths": {
+        "/api/abonnements/tarifs": {
+            "get": {
+                "tags": [
+                    "Abonnements"
+                ],
+                "summary": "Liste des tarifs d'abonnement disponibles (public)",
+                "operationId": "bfaf0d756fef11d35dfbbb55eb7ffaef",
+                "responses": {
+                    "200": {
+                        "description": "Tarifs disponibles"
+                    }
+                }
+            }
+        },
+        "/api/abonnements/actif": {
+            "get": {
+                "tags": [
+                    "Abonnements"
+                ],
+                "summary": "Mon abonnement actif",
+                "operationId": "ff4245e63cf01121e432aaefe88643c7",
+                "responses": {
+                    "200": {
+                        "description": "Abonnement actif ou null"
+                    }
+                },
+                "security": [
+                    {
+                        "sanctum": []
+                    }
+                ]
+            }
+        },
+        "/api/abonnements/historique": {
+            "get": {
+                "tags": [
+                    "Abonnements"
+                ],
+                "summary": "Historique de mes abonnements",
+                "operationId": "649c9f63818c0027ebebc494a621ec05",
+                "parameters": [
+                    {
+                        "name": "per_page",
+                        "in": "query",
+                        "required": false,
+                        "schema": {
+                            "type": "integer",
+                            "default": 15
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Historique des abonnements"
+                    }
+                },
+                "security": [
+                    {
+                        "sanctum": []
+                    }
+                ]
+            }
+        },
+        "/api/abonnements/initier": {
+            "post": {
+                "tags": [
+                    "Abonnements"
+                ],
+                "summary": "Initier un abonnement (étape 1 — avant paiement KKiaPay)",
+                "description": "Crée un abonnement en attente et retourne les informations nécessaires au SDK KKiaPay côté frontend.",
+                "operationId": "a4a356bce26a5afb6496bc9784259d29",
+                "requestBody": {
+                    "required": true,
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "required": [
+                                    "type"
+                                ],
+                                "properties": {
+                                    "type": {
+                                        "description": "Type d'abonnement souhaité",
+                                        "type": "string",
+                                        "example": "mensuel",
+                                        "enum": [
+                                            "mensuel",
+                                            "trimestriel",
+                                            "semestriel",
+                                            "annuel"
+                                        ]
+                                    }
+                                },
+                                "type": "object"
+                            }
+                        }
+                    }
+                },
+                "responses": {
+                    "200": {
+                        "description": "Abonnement initié. Utilisez kkiapay_public_key + montant pour payer via le SDK KKiaPay."
+                    },
+                    "422": {
+                        "description": "Abonnement déjà actif ou type invalide"
+                    }
+                },
+                "security": [
+                    {
+                        "sanctum": []
+                    }
+                ]
+            }
+        },
+        "/api/abonnements/confirmer": {
+            "post": {
+                "tags": [
+                    "Abonnements"
+                ],
+                "summary": "Confirmer un abonnement après paiement KKiaPay (étape 2)",
+                "description": "À appeler après que le SDK KKiaPay a retourné un transaction_id. Le backend vérifie la transaction auprès de KKiaPay et active l'abonnement.",
+                "operationId": "9874af401cbf1cd063266d5af74ab1c7",
+                "requestBody": {
+                    "required": true,
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "required": [
+                                    "paiement_id",
+                                    "transaction_id"
+                                ],
+                                "properties": {
+                                    "paiement_id": {
+                                        "description": "ID du paiement retourné par /api/abonnements/initier",
+                                        "type": "integer",
+                                        "example": 5
+                                    },
+                                    "transaction_id": {
+                                        "description": "Transaction ID retourné par le SDK KKiaPay après paiement réussi",
+                                        "type": "string",
+                                        "example": "kkp_txn_abc123def456"
+                                    }
+                                },
+                                "type": "object"
+                            }
+                        }
+                    }
+                },
+                "responses": {
+                    "200": {
+                        "description": "Abonnement activé avec succès"
+                    },
+                    "422": {
+                        "description": "Paiement invalide ou transaction KKiaPay non confirmée"
+                    }
+                },
+                "security": [
+                    {
+                        "sanctum": []
+                    }
+                ]
+            }
+        },
+        "/api/admin/dashboard": {
+            "get": {
+                "tags": [
+                    "Admin"
+                ],
+                "summary": "Statistiques globales du dashboard admin",
+                "operationId": "a4e953abeda97cdeaa1c2af786aea1f3",
+                "responses": {
+                    "200": {
+                        "description": "Statistiques globales"
+                    },
+                    "403": {
+                        "description": "Non autorisé"
+                    }
+                },
+                "security": [
+                    {
+                        "sanctum": []
+                    }
+                ]
+            }
+        },
+        "/api/admin/revenus/mensuel": {
+            "get": {
+                "tags": [
+                    "Admin"
+                ],
+                "summary": "Revenus mensuels sur les 12 derniers mois",
+                "operationId": "c8aedf19608fd557c222ee41d332b9e7",
+                "responses": {
+                    "200": {
+                        "description": "Revenus par mois"
+                    }
+                },
+                "security": [
+                    {
+                        "sanctum": []
+                    }
+                ]
+            }
+        },
+        "/api/admin/users": {
+            "get": {
+                "tags": [
+                    "Admin"
+                ],
+                "summary": "Liste de tous les utilisateurs",
+                "operationId": "8734f0eb21eaec99b614d902ba09f030",
+                "parameters": [
+                    {
+                        "name": "role",
+                        "in": "query",
+                        "description": "Filtrer par rôle",
+                        "required": false,
+                        "schema": {
+                            "type": "string",
+                            "enum": [
+                                "owner",
+                                "seeker",
+                                "admin"
+                            ]
+                        }
+                    },
+                    {
+                        "name": "search",
+                        "in": "query",
+                        "description": "Recherche par nom, email ou téléphone",
+                        "required": false,
+                        "schema": {
+                            "type": "string"
+                        }
+                    },
+                    {
+                        "name": "is_verified",
+                        "in": "query",
+                        "description": "Filtrer par statut de vérification",
+                        "required": false,
+                        "schema": {
+                            "type": "boolean"
+                        }
+                    },
+                    {
+                        "name": "deleted",
+                        "in": "query",
+                        "description": "Afficher uniquement les comptes supprimés",
+                        "required": false,
+                        "schema": {
+                            "type": "boolean"
+                        }
+                    },
+                    {
+                        "name": "per_page",
+                        "in": "query",
+                        "required": false,
+                        "schema": {
+                            "type": "integer",
+                            "default": 20
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Liste des utilisateurs"
+                    }
+                },
+                "security": [
+                    {
+                        "sanctum": []
+                    }
+                ]
+            }
+        },
+        "/api/admin/users/{id}/verify": {
+            "patch": {
+                "tags": [
+                    "Admin"
+                ],
+                "summary": "Vérifier ou retirer la vérification d'un propriétaire",
+                "operationId": "14dba836d0c4ad63dee90222114d1a3e",
+                "parameters": [
+                    {
+                        "name": "id",
+                        "in": "path",
+                        "description": "ID de l'utilisateur",
+                        "required": true,
+                        "schema": {
+                            "type": "integer",
+                            "example": 5
+                        }
+                    }
+                ],
+                "requestBody": {
+                    "required": true,
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "required": [
+                                    "is_verified"
+                                ],
+                                "properties": {
+                                    "is_verified": {
+                                        "description": "true = vérifier, false = retirer la vérification",
+                                        "type": "boolean",
+                                        "example": true
+                                    }
+                                },
+                                "type": "object"
+                            }
+                        }
+                    }
+                },
+                "responses": {
+                    "200": {
+                        "description": "Vérification mise à jour"
+                    },
+                    "422": {
+                        "description": "Utilisateur non propriétaire"
+                    }
+                },
+                "security": [
+                    {
+                        "sanctum": []
+                    }
+                ]
+            }
+        },
+        "/api/admin/users/{id}/suspension": {
+            "patch": {
+                "tags": [
+                    "Admin"
+                ],
+                "summary": "Suspendre ou réactiver un compte utilisateur",
+                "operationId": "f2bb2ce1610dcb16da2935232b491101",
+                "parameters": [
+                    {
+                        "name": "id",
+                        "in": "path",
+                        "required": true,
+                        "schema": {
+                            "type": "integer",
+                            "example": 5
+                        }
+                    }
+                ],
+                "requestBody": {
+                    "required": true,
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "required": [
+                                    "suspendre"
+                                ],
+                                "properties": {
+                                    "suspendre": {
+                                        "description": "true = suspendre le compte, false = réactiver",
+                                        "type": "boolean",
+                                        "example": true
+                                    }
+                                },
+                                "type": "object"
+                            }
+                        }
+                    }
+                },
+                "responses": {
+                    "200": {
+                        "description": "Compte suspendu ou réactivé"
+                    },
+                    "422": {
+                        "description": "Utilisateur introuvable"
+                    }
+                },
+                "security": [
+                    {
+                        "sanctum": []
+                    }
+                ]
+            }
+        },
+        "/api/admin/properties/pending": {
+            "get": {
+                "tags": [
+                    "Admin"
+                ],
+                "summary": "Annonces en attente de modération",
+                "operationId": "cbd78c065af53441afd6d2409864098e",
+                "parameters": [
+                    {
+                        "name": "per_page",
+                        "in": "query",
+                        "required": false,
+                        "schema": {
+                            "type": "integer",
+                            "default": 20
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Annonces à modérer"
+                    }
+                },
+                "security": [
+                    {
+                        "sanctum": []
+                    }
+                ]
+            }
+        },
+        "/api/admin/export/paiements": {
+            "get": {
+                "tags": [
+                    "Admin"
+                ],
+                "summary": "Exporter les paiements en CSV",
+                "operationId": "6bf916e6b3d82f1679febe821469b8cf",
+                "responses": {
+                    "200": {
+                        "description": "Fichier CSV des paiements"
+                    },
+                    "403": {
+                        "description": "Non autorisé"
+                    }
+                },
+                "security": [
+                    {
+                        "sanctum": []
+                    }
+                ]
+            }
+        },
+        "/api/admin/export/users": {
+            "get": {
+                "tags": [
+                    "Admin"
+                ],
+                "summary": "Exporter les utilisateurs en CSV",
+                "operationId": "a2e10752344944b1099680b20731d000",
+                "responses": {
+                    "200": {
+                        "description": "Fichier CSV des utilisateurs"
+                    },
+                    "403": {
+                        "description": "Non autorisé"
+                    }
+                },
+                "security": [
+                    {
+                        "sanctum": []
+                    }
+                ]
+            }
+        },
         "/api/auth/register": {
             "post": {
                 "tags": [
                     "Authentication"
                 ],
-                "summary": "Register a new user",
+                "summary": "Inscription",
                 "operationId": "c7bb21a0d87049e161b8e4c9b0d909f2",
                 "requestBody": {
                     "required": true,
@@ -27,34 +481,40 @@
                                 "required": [
                                     "name",
                                     "password",
+                                    "password_confirmation",
                                     "role"
                                 ],
                                 "properties": {
                                     "name": {
                                         "type": "string",
-                                        "example": "John Doe"
+                                        "example": "Moustapha Diallo"
                                     },
                                     "email": {
                                         "type": "string",
                                         "format": "email",
-                                        "example": "john@example.com"
+                                        "example": "jean.dupont@email.com"
                                     },
                                     "phone": {
                                         "type": "string",
-                                        "example": "+1234567890"
+                                        "example": "+22997000000"
                                     },
                                     "password": {
                                         "type": "string",
                                         "format": "password",
                                         "example": "password123"
                                     },
+                                    "password_confirmation": {
+                                        "type": "string",
+                                        "format": "password",
+                                        "example": "password123"
+                                    },
                                     "role": {
                                         "type": "string",
+                                        "example": "seeker",
                                         "enum": [
                                             "owner",
                                             "seeker"
-                                        ],
-                                        "example": "seeker"
+                                        ]
                                     }
                                 },
                                 "type": "object"
@@ -64,10 +524,10 @@
                 },
                 "responses": {
                     "201": {
-                        "description": "User registered successfully"
+                        "description": "Compte créé"
                     },
                     "422": {
-                        "description": "Validation error"
+                        "description": "Validation échouée"
                     }
                 }
             }
@@ -77,7 +537,7 @@
                 "tags": [
                     "Authentication"
                 ],
-                "summary": "Login user",
+                "summary": "Connexion",
                 "operationId": "dd51a484b7fa0f97c7680fdbde14cf5f",
                 "requestBody": {
                     "required": true,
@@ -91,11 +551,11 @@
                                     "email": {
                                         "type": "string",
                                         "format": "email",
-                                        "example": "john@example.com"
+                                        "example": "jean.dupont@email.com"
                                     },
                                     "phone": {
                                         "type": "string",
-                                        "example": "+1234567890"
+                                        "example": "+22997000000"
                                     },
                                     "password": {
                                         "type": "string",
@@ -110,10 +570,13 @@
                 },
                 "responses": {
                     "200": {
-                        "description": "Login successful"
+                        "description": "Connexion réussie"
                     },
                     "401": {
-                        "description": "Invalid credentials"
+                        "description": "Identifiants incorrects"
+                    },
+                    "422": {
+                        "description": "Validation échouée"
                     }
                 }
             }
@@ -123,7 +586,7 @@
                 "tags": [
                     "Authentication"
                 ],
-                "summary": "Refresh access token",
+                "summary": "Renouveler le token",
                 "operationId": "30c20c52f5f72828d8c531fd7c9ea3e7",
                 "requestBody": {
                     "required": true,
@@ -145,7 +608,10 @@
                 },
                 "responses": {
                     "200": {
-                        "description": "Token refreshed"
+                        "description": "Token renouvelé"
+                    },
+                    "401": {
+                        "description": "Token invalide"
                     }
                 }
             }
@@ -155,11 +621,11 @@
                 "tags": [
                     "Authentication"
                 ],
-                "summary": "Logout user",
+                "summary": "Déconnexion",
                 "operationId": "df9bdc6c7a6d9f20b983526b2ec0f698",
                 "responses": {
                     "200": {
-                        "description": "Logged out successfully"
+                        "description": "Déconnecté"
                     }
                 },
                 "security": [
@@ -174,11 +640,11 @@
                 "tags": [
                     "Authentication"
                 ],
-                "summary": "Logout from all devices",
+                "summary": "Déconnexion tous appareils",
                 "operationId": "cb4dc83917db0d5fff6f1f5a2562c05b",
                 "responses": {
                     "200": {
-                        "description": "Logged out from all devices"
+                        "description": "Tous déconnectés"
                     }
                 },
                 "security": [
@@ -193,7 +659,7 @@
                 "tags": [
                     "Authentication"
                 ],
-                "summary": "Send password reset link",
+                "summary": "Mot de passe oublié",
                 "operationId": "f51c7074de53475eab87e336cc4e06a6",
                 "requestBody": {
                     "required": true,
@@ -206,8 +672,7 @@
                                 "properties": {
                                     "email": {
                                         "type": "string",
-                                        "format": "email",
-                                        "example": "john@example.com"
+                                        "format": "email"
                                     }
                                 },
                                 "type": "object"
@@ -217,7 +682,7 @@
                 },
                 "responses": {
                     "200": {
-                        "description": "Reset link sent"
+                        "description": "Lien envoyé"
                     }
                 }
             }
@@ -227,7 +692,7 @@
                 "tags": [
                     "Authentication"
                 ],
-                "summary": "Reset password",
+                "summary": "Réinitialiser le mot de passe",
                 "operationId": "96e44e1ebcd811418fd95ee4c56162f0",
                 "requestBody": {
                     "required": true,
@@ -264,7 +729,10 @@
                 },
                 "responses": {
                     "200": {
-                        "description": "Password reset successfully"
+                        "description": "Mot de passe réinitialisé"
+                    },
+                    "422": {
+                        "description": "Token invalide"
                     }
                 }
             }
@@ -274,11 +742,2279 @@
                 "tags": [
                     "Authentication"
                 ],
-                "summary": "Get authenticated user",
+                "summary": "Profil connecté",
                 "operationId": "b5de204f5e452ef51327c691aa99e77c",
                 "responses": {
                     "200": {
-                        "description": "User data"
+                        "description": "Données utilisateur"
+                    }
+                },
+                "security": [
+                    {
+                        "sanctum": []
+                    }
+                ]
+            }
+        },
+        "/api/auth/verify-email/{id}/{hash}": {
+            "get": {
+                "tags": [
+                    "Authentication"
+                ],
+                "summary": "Vérifier email",
+                "operationId": "4cd46422b55705658018853fc15ca739",
+                "parameters": [
+                    {
+                        "name": "id",
+                        "in": "path",
+                        "required": true,
+                        "schema": {
+                            "type": "integer"
+                        }
+                    },
+                    {
+                        "name": "hash",
+                        "in": "path",
+                        "required": true,
+                        "schema": {
+                            "type": "string"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Email vérifié"
+                    }
+                }
+            }
+        },
+        "/api/auth/resend-verification": {
+            "post": {
+                "tags": [
+                    "Authentication"
+                ],
+                "summary": "Renvoyer email vérification",
+                "operationId": "3a85353b217a52c3c33cd55d6aa38662",
+                "responses": {
+                    "200": {
+                        "description": "Email renvoyé"
+                    }
+                },
+                "security": [
+                    {
+                        "sanctum": []
+                    }
+                ]
+            }
+        },
+        "/api/chercheur/favoris/{propertyId}": {
+            "post": {
+                "tags": [
+                    "Chercheur"
+                ],
+                "summary": "Ajouter ou retirer une annonce des favoris (toggle)",
+                "operationId": "37d20969e0c515a9863fb626fce59975",
+                "parameters": [
+                    {
+                        "name": "propertyId",
+                        "in": "path",
+                        "description": "ID de l'annonce",
+                        "required": true,
+                        "schema": {
+                            "type": "integer",
+                            "example": 3
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Favori ajouté ou retiré"
+                    },
+                    "404": {
+                        "description": "Annonce introuvable"
+                    }
+                },
+                "security": [
+                    {
+                        "sanctum": []
+                    }
+                ]
+            }
+        },
+        "/api/chercheur/favoris": {
+            "get": {
+                "tags": [
+                    "Chercheur"
+                ],
+                "summary": "Mes annonces favorites",
+                "operationId": "d0d11e1c568c3b9f6e137ee57a124192",
+                "parameters": [
+                    {
+                        "name": "per_page",
+                        "in": "query",
+                        "required": false,
+                        "schema": {
+                            "type": "integer",
+                            "default": 15
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Liste des favoris"
+                    }
+                },
+                "security": [
+                    {
+                        "sanctum": []
+                    }
+                ]
+            }
+        },
+        "/api/chercheur/visites": {
+            "get": {
+                "tags": [
+                    "Chercheur"
+                ],
+                "summary": "Mes demandes de visite",
+                "operationId": "0e27e1dac0c564454efddc3698fbe360",
+                "parameters": [
+                    {
+                        "name": "per_page",
+                        "in": "query",
+                        "required": false,
+                        "schema": {
+                            "type": "integer",
+                            "default": 15
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Mes demandes de visite"
+                    }
+                },
+                "security": [
+                    {
+                        "sanctum": []
+                    }
+                ]
+            },
+            "post": {
+                "tags": [
+                    "Chercheur"
+                ],
+                "summary": "Demander une visite pour une annonce",
+                "operationId": "a167b82e847baaebe45decd9cefcbbc6",
+                "requestBody": {
+                    "required": true,
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "required": [
+                                    "id_property",
+                                    "date_souhaitee"
+                                ],
+                                "properties": {
+                                    "id_property": {
+                                        "description": "ID de l'annonce à visiter",
+                                        "type": "integer",
+                                        "example": 5
+                                    },
+                                    "date_souhaitee": {
+                                        "description": "Date et heure souhaitées pour la visite",
+                                        "type": "string",
+                                        "format": "date-time",
+                                        "example": "2026-07-15 10:00:00"
+                                    },
+                                    "message": {
+                                        "type": "string",
+                                        "example": "Je suis disponible le matin de préférence.",
+                                        "nullable": true
+                                    }
+                                },
+                                "type": "object"
+                            }
+                        }
+                    }
+                },
+                "responses": {
+                    "201": {
+                        "description": "Demande de visite envoyée"
+                    },
+                    "422": {
+                        "description": "Données invalides ou demande déjà existante"
+                    }
+                },
+                "security": [
+                    {
+                        "sanctum": []
+                    }
+                ]
+            }
+        },
+        "/api/chercheur/visites/{id}/annuler": {
+            "patch": {
+                "tags": [
+                    "Chercheur"
+                ],
+                "summary": "Annuler une demande de visite",
+                "operationId": "813375ad9318d6c762ae46012f0b7b7b",
+                "parameters": [
+                    {
+                        "name": "id",
+                        "in": "path",
+                        "required": true,
+                        "schema": {
+                            "type": "integer"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Visite annulée"
+                    },
+                    "422": {
+                        "description": "Visite introuvable ou non annulable"
+                    }
+                },
+                "security": [
+                    {
+                        "sanctum": []
+                    }
+                ]
+            }
+        },
+        "/api/owner/visites": {
+            "get": {
+                "tags": [
+                    "Chercheur"
+                ],
+                "summary": "Visites reçues sur mes annonces (owner)",
+                "operationId": "9c860354cd318230251943776bde341e",
+                "parameters": [
+                    {
+                        "name": "per_page",
+                        "in": "query",
+                        "required": false,
+                        "schema": {
+                            "type": "integer",
+                            "default": 15
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Visites reçues"
+                    },
+                    "403": {
+                        "description": "Réservé aux propriétaires"
+                    }
+                },
+                "security": [
+                    {
+                        "sanctum": []
+                    }
+                ]
+            }
+        },
+        "/api/owner/visites/{id}/repondre": {
+            "patch": {
+                "tags": [
+                    "Chercheur"
+                ],
+                "summary": "Confirmer ou refuser une visite (owner)",
+                "operationId": "4ad8cda6ae9c972dbfa9183a0aa3d887",
+                "parameters": [
+                    {
+                        "name": "id",
+                        "in": "path",
+                        "required": true,
+                        "schema": {
+                            "type": "integer"
+                        }
+                    }
+                ],
+                "requestBody": {
+                    "required": true,
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "required": [
+                                    "status"
+                                ],
+                                "properties": {
+                                    "status": {
+                                        "type": "string",
+                                        "example": "confirmée",
+                                        "enum": [
+                                            "confirmée",
+                                            "refusée"
+                                        ]
+                                    },
+                                    "note_proprietaire": {
+                                        "type": "string",
+                                        "example": "Rendez-vous confirmé. Je vous attends à 10h.",
+                                        "nullable": true
+                                    }
+                                },
+                                "type": "object"
+                            }
+                        }
+                    }
+                },
+                "responses": {
+                    "200": {
+                        "description": "Réponse envoyée"
+                    },
+                    "403": {
+                        "description": "Non autorisé"
+                    },
+                    "422": {
+                        "description": "Visite introuvable"
+                    }
+                },
+                "security": [
+                    {
+                        "sanctum": []
+                    }
+                ]
+            }
+        },
+        "/api/contacts/initier": {
+            "post": {
+                "tags": [
+                    "Contacts"
+                ],
+                "summary": "Initier le déblocage d'un contact propriétaire (étape 1)",
+                "description": "Si l'utilisateur a déjà payé, retourne directement le contact. Sinon, retourne les infos de paiement KKiaPay.",
+                "operationId": "6a52ab25ead51dd3afcb30f987c8861d",
+                "requestBody": {
+                    "required": true,
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "required": [
+                                    "property_id"
+                                ],
+                                "properties": {
+                                    "property_id": {
+                                        "description": "ID de l'annonce dont on veut débloquer le contact",
+                                        "type": "integer",
+                                        "example": 3
+                                    }
+                                },
+                                "type": "object"
+                            }
+                        }
+                    }
+                },
+                "responses": {
+                    "200": {
+                        "description": "Contact retourné directement (déjà payé) ou informations de paiement KKiaPay"
+                    },
+                    "422": {
+                        "description": "Annonce invalide"
+                    }
+                },
+                "security": [
+                    {
+                        "sanctum": []
+                    }
+                ]
+            }
+        },
+        "/api/contacts/confirmer": {
+            "post": {
+                "tags": [
+                    "Contacts"
+                ],
+                "summary": "Confirmer le paiement et obtenir le contact (étape 2)",
+                "operationId": "a18ab7e3cd3b47cf72bf6a6fafcd5d11",
+                "requestBody": {
+                    "required": true,
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "required": [
+                                    "paiement_id",
+                                    "transaction_id"
+                                ],
+                                "properties": {
+                                    "paiement_id": {
+                                        "description": "ID du paiement retourné par /api/contacts/initier",
+                                        "type": "integer",
+                                        "example": 12
+                                    },
+                                    "transaction_id": {
+                                        "description": "Transaction ID KKiaPay après paiement réussi",
+                                        "type": "string",
+                                        "example": "kkp_txn_xyz789"
+                                    }
+                                },
+                                "type": "object"
+                            }
+                        }
+                    }
+                },
+                "responses": {
+                    "200": {
+                        "description": "Contact du propriétaire débloqué"
+                    },
+                    "422": {
+                        "description": "Paiement invalide"
+                    }
+                },
+                "security": [
+                    {
+                        "sanctum": []
+                    }
+                ]
+            }
+        },
+        "/api/contacts/historique": {
+            "get": {
+                "tags": [
+                    "Contacts"
+                ],
+                "summary": "Historique des contacts débloqués",
+                "operationId": "c61f159e82888329a51547c1b0636fc5",
+                "parameters": [
+                    {
+                        "name": "per_page",
+                        "in": "query",
+                        "required": false,
+                        "schema": {
+                            "type": "integer",
+                            "default": 15
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Historique des contacts débloqués"
+                    }
+                },
+                "security": [
+                    {
+                        "sanctum": []
+                    }
+                ]
+            }
+        },
+        "/api/notifications/send": {
+            "post": {
+                "tags": [
+                    "Notifications"
+                ],
+                "summary": "Envoyer une notification push FCM",
+                "description": "Envoie une notification push à un appareil via Firebase Cloud Messaging",
+                "operationId": "fa2f8ebe1f207b63870b3b8962f00815",
+                "requestBody": {
+                    "required": true,
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "required": [
+                                    "fcm_token",
+                                    "title",
+                                    "body"
+                                ],
+                                "properties": {
+                                    "fcm_token": {
+                                        "description": "Token FCM de l'appareil destinataire",
+                                        "type": "string",
+                                        "example": "eXXXX..."
+                                    },
+                                    "title": {
+                                        "description": "Titre de la notification",
+                                        "type": "string",
+                                        "example": "Nouvelle commande"
+                                    },
+                                    "body": {
+                                        "description": "Corps de la notification",
+                                        "type": "string",
+                                        "example": "Votre commande a été confirmée"
+                                    },
+                                    "data": {
+                                        "description": "Données supplémentaires (optionnel)",
+                                        "type": "object",
+                                        "example": {
+                                            "route": "/orders/123",
+                                            "order_id": "123"
+                                        }
+                                    }
+                                },
+                                "type": "object"
+                            }
+                        }
+                    }
+                },
+                "responses": {
+                    "200": {
+                        "description": "Notification envoyée avec succès",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "properties": {
+                                        "message": {
+                                            "type": "string",
+                                            "example": "Notification envoyée avec succès"
+                                        },
+                                        "fcm_response": {
+                                            "type": "object"
+                                        }
+                                    },
+                                    "type": "object"
+                                }
+                            }
+                        }
+                    },
+                    "422": {
+                        "description": "Erreur de validation"
+                    },
+                    "500": {
+                        "description": "Erreur serveur FCM"
+                    }
+                },
+                "security": [
+                    {
+                        "sanctum": []
+                    }
+                ]
+            }
+        },
+        "/api/notifications/broadcast": {
+            "post": {
+                "tags": [
+                    "Notifications"
+                ],
+                "summary": "Envoyer une notification à plusieurs appareils",
+                "operationId": "ccd97e7e4766d27eea2eb46ed9c6e8df",
+                "requestBody": {
+                    "required": true,
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "required": [
+                                    "fcm_tokens",
+                                    "title",
+                                    "body"
+                                ],
+                                "properties": {
+                                    "fcm_tokens": {
+                                        "type": "array",
+                                        "items": {
+                                            "type": "string"
+                                        },
+                                        "example": [
+                                            "token1",
+                                            "token2"
+                                        ]
+                                    },
+                                    "title": {
+                                        "type": "string",
+                                        "example": "Promotion"
+                                    },
+                                    "body": {
+                                        "type": "string",
+                                        "example": "Offre spéciale disponible !"
+                                    },
+                                    "data": {
+                                        "type": "object",
+                                        "example": {
+                                            "route": "/promotions"
+                                        }
+                                    }
+                                },
+                                "type": "object"
+                            }
+                        }
+                    }
+                },
+                "responses": {
+                    "200": {
+                        "description": "Notifications envoyées",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "properties": {
+                                        "message": {
+                                            "type": "string"
+                                        },
+                                        "sent": {
+                                            "type": "integer",
+                                            "example": 5
+                                        },
+                                        "failed": {
+                                            "type": "integer",
+                                            "example": 1
+                                        }
+                                    },
+                                    "type": "object"
+                                }
+                            }
+                        }
+                    }
+                },
+                "security": [
+                    {
+                        "sanctum": []
+                    }
+                ]
+            }
+        },
+        "/api/paiements": {
+            "get": {
+                "tags": [
+                    "Paiements"
+                ],
+                "summary": "Mon historique de paiements",
+                "operationId": "45af35b5fb96091b05cb3dbf19d58478",
+                "parameters": [
+                    {
+                        "name": "per_page",
+                        "in": "query",
+                        "required": false,
+                        "schema": {
+                            "type": "integer",
+                            "default": 15
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Historique des paiements"
+                    }
+                },
+                "security": [
+                    {
+                        "sanctum": []
+                    }
+                ]
+            }
+        },
+        "/api/admin/paiements": {
+            "get": {
+                "tags": [
+                    "Paiements"
+                ],
+                "summary": "Tous les paiements (admin)",
+                "operationId": "ba11a3f97058cea4dc6137fde86bf4c9",
+                "parameters": [
+                    {
+                        "name": "status",
+                        "in": "query",
+                        "required": false,
+                        "schema": {
+                            "type": "string"
+                        }
+                    },
+                    {
+                        "name": "type",
+                        "in": "query",
+                        "required": false,
+                        "schema": {
+                            "type": "string"
+                        }
+                    },
+                    {
+                        "name": "per_page",
+                        "in": "query",
+                        "required": false,
+                        "schema": {
+                            "type": "integer",
+                            "default": 15
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Tous les paiements"
+                    },
+                    "403": {
+                        "description": "Non autorisé"
+                    }
+                },
+                "security": [
+                    {
+                        "sanctum": []
+                    }
+                ]
+            }
+        },
+        "/api/properties": {
+            "get": {
+                "tags": [
+                    "Properties"
+                ],
+                "summary": "Liste des annonces disponibles (public)",
+                "operationId": "e83a7fc5b1d98569892c10b7b0223879",
+                "parameters": [
+                    {
+                        "name": "ville",
+                        "in": "query",
+                        "description": "Filtrer par ville (ex: Cotonou)",
+                        "required": false,
+                        "schema": {
+                            "type": "string"
+                        }
+                    },
+                    {
+                        "name": "quartier",
+                        "in": "query",
+                        "description": "Filtrer par quartier",
+                        "required": false,
+                        "schema": {
+                            "type": "string"
+                        }
+                    },
+                    {
+                        "name": "commune",
+                        "in": "query",
+                        "description": "Filtrer par commune",
+                        "required": false,
+                        "schema": {
+                            "type": "string"
+                        }
+                    },
+                    {
+                        "name": "type_logement",
+                        "in": "query",
+                        "description": "Type de logement",
+                        "required": false,
+                        "schema": {
+                            "type": "string",
+                            "enum": [
+                                "appartement",
+                                "maison",
+                                "studio",
+                                "chambre",
+                                "villa",
+                                "duplex"
+                            ]
+                        }
+                    },
+                    {
+                        "name": "prix_min",
+                        "in": "query",
+                        "description": "Prix minimum (XOF)",
+                        "required": false,
+                        "schema": {
+                            "type": "number",
+                            "example": 50000
+                        }
+                    },
+                    {
+                        "name": "prix_max",
+                        "in": "query",
+                        "description": "Prix maximum (XOF)",
+                        "required": false,
+                        "schema": {
+                            "type": "number",
+                            "example": 200000
+                        }
+                    },
+                    {
+                        "name": "nb_pieces",
+                        "in": "query",
+                        "description": "Nombre de pièces",
+                        "required": false,
+                        "schema": {
+                            "type": "integer",
+                            "example": 3
+                        }
+                    },
+                    {
+                        "name": "meuble",
+                        "in": "query",
+                        "description": "Meublé ou non",
+                        "required": false,
+                        "schema": {
+                            "type": "boolean"
+                        }
+                    },
+                    {
+                        "name": "per_page",
+                        "in": "query",
+                        "description": "Résultats par page",
+                        "required": false,
+                        "schema": {
+                            "type": "integer",
+                            "default": 15
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Liste des annonces"
+                    }
+                }
+            },
+            "post": {
+                "tags": [
+                    "Properties"
+                ],
+                "summary": "Créer une annonce (owner) — sans médias",
+                "description": "Crée l'annonce. Uploadez ensuite les médias via POST /api/properties/{id}/medias",
+                "operationId": "70bf627c7a3b7593179b22a21956b41e",
+                "requestBody": {
+                    "required": true,
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "required": [
+                                    "title",
+                                    "description",
+                                    "quartier",
+                                    "ville",
+                                    "prix_loyer",
+                                    "type_logement",
+                                    "condition",
+                                    "nb_pieces"
+                                ],
+                                "properties": {
+                                    "title": {
+                                        "description": "Titre de l'annonce",
+                                        "type": "string",
+                                        "example": "Beau appartement à Cadjehoun"
+                                    },
+                                    "description": {
+                                        "description": "Description détaillée du logement",
+                                        "type": "string",
+                                        "example": "Appartement moderne avec toutes commodités..."
+                                    },
+                                    "indications_acces": {
+                                        "description": "Indications pour trouver le logement (pas toujours d'adresse précise)",
+                                        "type": "string",
+                                        "example": "Après le carrefour Total, 2ème rue à droite",
+                                        "nullable": true
+                                    },
+                                    "quartier": {
+                                        "type": "string",
+                                        "example": "Cadjehoun"
+                                    },
+                                    "commune": {
+                                        "type": "string",
+                                        "example": "Littoral",
+                                        "nullable": true
+                                    },
+                                    "ville": {
+                                        "type": "string",
+                                        "example": "Cotonou"
+                                    },
+                                    "pays": {
+                                        "description": "Pays (défaut: Bénin)",
+                                        "type": "string",
+                                        "example": "Bénin"
+                                    },
+                                    "prix_loyer": {
+                                        "description": "Prix du loyer mensuel en XOF",
+                                        "type": "number",
+                                        "example": 75000
+                                    },
+                                    "devise": {
+                                        "description": "Devise (défaut: XOF — Franc CFA)",
+                                        "type": "string",
+                                        "example": "XOF"
+                                    },
+                                    "type_logement": {
+                                        "type": "string",
+                                        "example": "appartement",
+                                        "enum": [
+                                            "appartement",
+                                            "maison",
+                                            "studio",
+                                            "chambre",
+                                            "villa",
+                                            "duplex"
+                                        ]
+                                    },
+                                    "condition": {
+                                        "description": "État général du logement",
+                                        "type": "string",
+                                        "example": "Bon état"
+                                    },
+                                    "nb_avance": {
+                                        "description": "Nombre de mois d'avance requis",
+                                        "type": "integer",
+                                        "example": 3
+                                    },
+                                    "caution_electricite": {
+                                        "description": "Caution électricité (XOF)",
+                                        "type": "number",
+                                        "example": 15000,
+                                        "nullable": true
+                                    },
+                                    "caution_eau": {
+                                        "description": "Caution eau (XOF)",
+                                        "type": "number",
+                                        "example": 10000,
+                                        "nullable": true
+                                    },
+                                    "nb_pieces": {
+                                        "type": "integer",
+                                        "example": 3
+                                    },
+                                    "date_debut_louer": {
+                                        "description": "Date de disponibilité",
+                                        "type": "string",
+                                        "format": "date",
+                                        "example": "2026-05-01",
+                                        "nullable": true
+                                    },
+                                    "eau_courante": {
+                                        "type": "boolean",
+                                        "example": true
+                                    },
+                                    "electricite": {
+                                        "type": "boolean",
+                                        "example": true
+                                    },
+                                    "gardien": {
+                                        "type": "boolean",
+                                        "example": false
+                                    },
+                                    "parking": {
+                                        "type": "boolean",
+                                        "example": false
+                                    },
+                                    "meuble": {
+                                        "type": "boolean",
+                                        "example": false
+                                    }
+                                },
+                                "type": "object"
+                            }
+                        }
+                    }
+                },
+                "responses": {
+                    "201": {
+                        "description": "Annonce créée. Uploadez les médias via POST /api/properties/{id}/medias"
+                    },
+                    "403": {
+                        "description": "Non autorisé — compte non propriétaire ou non vérifié"
+                    },
+                    "422": {
+                        "description": "Données invalides"
+                    }
+                },
+                "security": [
+                    {
+                        "sanctum": []
+                    }
+                ]
+            }
+        },
+        "/api/properties/{id}": {
+            "get": {
+                "tags": [
+                    "Properties"
+                ],
+                "summary": "Détail d'une annonce (public)",
+                "operationId": "7cea0ed0f808489cbcc61f528935cd41",
+                "parameters": [
+                    {
+                        "name": "id",
+                        "in": "path",
+                        "description": "ID de l'annonce",
+                        "required": true,
+                        "schema": {
+                            "type": "integer",
+                            "example": 1
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Détail de l'annonce"
+                    },
+                    "404": {
+                        "description": "Annonce introuvable"
+                    }
+                }
+            },
+            "put": {
+                "tags": [
+                    "Properties"
+                ],
+                "summary": "Modifier les infos d'une annonce (sans médias)",
+                "operationId": "19a6c5948a5a419de858916d8a4ab7c6",
+                "parameters": [
+                    {
+                        "name": "id",
+                        "in": "path",
+                        "description": "ID de l'annonce",
+                        "required": true,
+                        "schema": {
+                            "type": "integer",
+                            "example": 1
+                        }
+                    }
+                ],
+                "requestBody": {
+                    "description": "Champs à modifier (tous optionnels)",
+                    "required": true,
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "properties": {
+                                    "title": {
+                                        "type": "string",
+                                        "example": "Appartement rénové à Cadjehoun"
+                                    },
+                                    "description": {
+                                        "type": "string",
+                                        "example": "Description mise à jour..."
+                                    },
+                                    "indications_acces": {
+                                        "type": "string",
+                                        "nullable": true
+                                    },
+                                    "quartier": {
+                                        "type": "string",
+                                        "example": "Cadjehoun"
+                                    },
+                                    "commune": {
+                                        "type": "string",
+                                        "nullable": true
+                                    },
+                                    "ville": {
+                                        "type": "string",
+                                        "example": "Cotonou"
+                                    },
+                                    "pays": {
+                                        "type": "string",
+                                        "example": "Bénin"
+                                    },
+                                    "prix_loyer": {
+                                        "type": "number",
+                                        "example": 80000
+                                    },
+                                    "devise": {
+                                        "type": "string",
+                                        "example": "XOF"
+                                    },
+                                    "type_logement": {
+                                        "type": "string",
+                                        "enum": [
+                                            "appartement",
+                                            "maison",
+                                            "studio",
+                                            "chambre",
+                                            "villa",
+                                            "duplex"
+                                        ]
+                                    },
+                                    "condition": {
+                                        "type": "string",
+                                        "example": "Très bon état"
+                                    },
+                                    "nb_avance": {
+                                        "type": "integer",
+                                        "example": 2
+                                    },
+                                    "caution_electricite": {
+                                        "type": "number",
+                                        "nullable": true
+                                    },
+                                    "caution_eau": {
+                                        "type": "number",
+                                        "nullable": true
+                                    },
+                                    "nb_pieces": {
+                                        "type": "integer",
+                                        "example": 4
+                                    },
+                                    "date_debut_louer": {
+                                        "type": "string",
+                                        "format": "date",
+                                        "nullable": true
+                                    },
+                                    "eau_courante": {
+                                        "type": "boolean"
+                                    },
+                                    "electricite": {
+                                        "type": "boolean"
+                                    },
+                                    "gardien": {
+                                        "type": "boolean"
+                                    },
+                                    "parking": {
+                                        "type": "boolean"
+                                    },
+                                    "meuble": {
+                                        "type": "boolean"
+                                    }
+                                },
+                                "type": "object"
+                            }
+                        }
+                    }
+                },
+                "responses": {
+                    "200": {
+                        "description": "Annonce mise à jour"
+                    },
+                    "403": {
+                        "description": "Non autorisé"
+                    },
+                    "404": {
+                        "description": "Annonce introuvable"
+                    },
+                    "422": {
+                        "description": "Données invalides"
+                    }
+                },
+                "security": [
+                    {
+                        "sanctum": []
+                    }
+                ]
+            },
+            "delete": {
+                "tags": [
+                    "Properties"
+                ],
+                "summary": "Supprimer une annonce et tous ses médias (soft delete)",
+                "operationId": "acabc512dd07a218f8c1a4cf46a922a4",
+                "parameters": [
+                    {
+                        "name": "id",
+                        "in": "path",
+                        "description": "ID de l'annonce",
+                        "required": true,
+                        "schema": {
+                            "type": "integer",
+                            "example": 1
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Annonce supprimée"
+                    },
+                    "403": {
+                        "description": "Non autorisé"
+                    },
+                    "404": {
+                        "description": "Annonce introuvable"
+                    }
+                },
+                "security": [
+                    {
+                        "sanctum": []
+                    }
+                ]
+            }
+        },
+        "/api/properties/my": {
+            "get": {
+                "tags": [
+                    "Properties"
+                ],
+                "summary": "Mes annonces (owner uniquement)",
+                "operationId": "4c9a3ef88001139ccd7a1954f0232a8c",
+                "parameters": [
+                    {
+                        "name": "per_page",
+                        "in": "query",
+                        "required": false,
+                        "schema": {
+                            "type": "integer",
+                            "default": 15
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Mes annonces"
+                    },
+                    "403": {
+                        "description": "Réservé aux propriétaires"
+                    }
+                },
+                "security": [
+                    {
+                        "sanctum": []
+                    }
+                ]
+            }
+        },
+        "/api/properties/{id}/status": {
+            "patch": {
+                "tags": [
+                    "Properties"
+                ],
+                "summary": "Changer le statut d'une annonce (owner)",
+                "operationId": "7e215f4cedb3437fed4529c564613acd",
+                "parameters": [
+                    {
+                        "name": "id",
+                        "in": "path",
+                        "required": true,
+                        "schema": {
+                            "type": "integer",
+                            "example": 1
+                        }
+                    }
+                ],
+                "requestBody": {
+                    "required": true,
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "required": [
+                                    "status"
+                                ],
+                                "properties": {
+                                    "status": {
+                                        "description": "Nouveau statut de l'annonce",
+                                        "type": "string",
+                                        "example": "loué",
+                                        "enum": [
+                                            "disponible",
+                                            "loué",
+                                            "suspendu"
+                                        ]
+                                    }
+                                },
+                                "type": "object"
+                            }
+                        }
+                    }
+                },
+                "responses": {
+                    "200": {
+                        "description": "Statut mis à jour"
+                    },
+                    "403": {
+                        "description": "Non autorisé"
+                    },
+                    "422": {
+                        "description": "Statut invalide"
+                    }
+                },
+                "security": [
+                    {
+                        "sanctum": []
+                    }
+                ]
+            }
+        },
+        "/api/properties/{id}/verify": {
+            "patch": {
+                "tags": [
+                    "Properties"
+                ],
+                "summary": "Vérifier ou suspendre une annonce (admin uniquement)",
+                "operationId": "27977339e92d5eacceeb28bf2ae555f2",
+                "parameters": [
+                    {
+                        "name": "id",
+                        "in": "path",
+                        "required": true,
+                        "schema": {
+                            "type": "integer",
+                            "example": 1
+                        }
+                    }
+                ],
+                "requestBody": {
+                    "required": true,
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "required": [
+                                    "is_verified"
+                                ],
+                                "properties": {
+                                    "is_verified": {
+                                        "description": "true = publier, false = suspendre",
+                                        "type": "boolean",
+                                        "example": true
+                                    }
+                                },
+                                "type": "object"
+                            }
+                        }
+                    }
+                },
+                "responses": {
+                    "200": {
+                        "description": "Annonce vérifiée ou suspendue"
+                    },
+                    "403": {
+                        "description": "Réservé aux administrateurs"
+                    },
+                    "404": {
+                        "description": "Annonce introuvable"
+                    }
+                },
+                "security": [
+                    {
+                        "sanctum": []
+                    }
+                ]
+            }
+        },
+        "/api/properties/{id}/medias": {
+            "get": {
+                "tags": [
+                    "Property Medias"
+                ],
+                "summary": "Lister tous les médias d'une annonce",
+                "operationId": "f6102e322a9fa2bbd4291ec6bb08fecb",
+                "parameters": [
+                    {
+                        "name": "id",
+                        "in": "path",
+                        "required": true,
+                        "schema": {
+                            "type": "integer",
+                            "example": 1
+                        }
+                    },
+                    {
+                        "name": "type",
+                        "in": "query",
+                        "description": "Filtrer par type",
+                        "required": false,
+                        "schema": {
+                            "type": "string",
+                            "enum": [
+                                "image",
+                                "video"
+                            ]
+                        }
+                    },
+                    {
+                        "name": "zone",
+                        "in": "query",
+                        "description": "Filtrer par zone",
+                        "required": false,
+                        "schema": {
+                            "type": "string",
+                            "enum": [
+                                "facade_exterieure",
+                                "entree",
+                                "cour",
+                                "jardin",
+                                "terrasse",
+                                "balcon",
+                                "toiture",
+                                "parking",
+                                "portail",
+                                "salon",
+                                "salle_a_manger",
+                                "cuisine",
+                                "couloir",
+                                "chambre_principale",
+                                "chambre_2",
+                                "chambre_3",
+                                "chambre_4",
+                                "salle_de_bain",
+                                "douche",
+                                "toilettes",
+                                "salle_d_eau",
+                                "garage",
+                                "magasin",
+                                "cave",
+                                "buanderie",
+                                "bureau",
+                                "salle_de_sport",
+                                "couloir_commun",
+                                "escaliers",
+                                "ascenseur",
+                                "piscine",
+                                "autre"
+                            ]
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Liste des médias"
+                    },
+                    "404": {
+                        "description": "Annonce introuvable"
+                    }
+                }
+            },
+            "post": {
+                "tags": [
+                    "Property Medias"
+                ],
+                "summary": "Uploader des médias sur une annonce (images et/ou vidéos)",
+                "description": "Utilisé à la création et à la modification. Envoyer les fichiers en multipart/form-data avec les métadonnées associées.",
+                "operationId": "49920072275741343c95eab76ee4a28e",
+                "parameters": [
+                    {
+                        "name": "id",
+                        "in": "path",
+                        "description": "ID de l'annonce",
+                        "required": true,
+                        "schema": {
+                            "type": "integer",
+                            "example": 1
+                        }
+                    }
+                ],
+                "requestBody": {
+                    "required": true,
+                    "content": {
+                        "multipart/form-data": {
+                            "schema": {
+                                "required": [
+                                    "fichier",
+                                    "type",
+                                    "zone"
+                                ],
+                                "properties": {
+                                    "fichier": {
+                                        "description": "Fichier image ou vidéo",
+                                        "type": "string",
+                                        "format": "binary"
+                                    },
+                                    "type": {
+                                        "type": "string",
+                                        "example": "image",
+                                        "enum": [
+                                            "image",
+                                            "video"
+                                        ]
+                                    },
+                                    "zone": {
+                                        "type": "string",
+                                        "example": "salon",
+                                        "enum": [
+                                            "facade_exterieure",
+                                            "entree",
+                                            "cour",
+                                            "jardin",
+                                            "terrasse",
+                                            "balcon",
+                                            "toiture",
+                                            "parking",
+                                            "portail",
+                                            "salon",
+                                            "salle_a_manger",
+                                            "cuisine",
+                                            "couloir",
+                                            "chambre_principale",
+                                            "chambre_2",
+                                            "chambre_3",
+                                            "chambre_4",
+                                            "salle_de_bain",
+                                            "douche",
+                                            "toilettes",
+                                            "salle_d_eau",
+                                            "garage",
+                                            "magasin",
+                                            "cave",
+                                            "buanderie",
+                                            "bureau",
+                                            "salle_de_sport",
+                                            "couloir_commun",
+                                            "escaliers",
+                                            "ascenseur",
+                                            "piscine",
+                                            "autre"
+                                        ]
+                                    },
+                                    "description": {
+                                        "type": "string",
+                                        "nullable": true
+                                    },
+                                    "is_principale": {
+                                        "type": "boolean",
+                                        "nullable": true,
+                                        "default": false
+                                    }
+                                },
+                                "type": "object"
+                            }
+                        }
+                    }
+                },
+                "responses": {
+                    "200": {
+                        "description": "Médias uploadés avec succès"
+                    },
+                    "403": {
+                        "description": "Non autorisé"
+                    },
+                    "422": {
+                        "description": "Fichier invalide ou quota dépassé"
+                    }
+                },
+                "security": [
+                    {
+                        "sanctum": []
+                    }
+                ]
+            }
+        },
+        "/api/properties/{id}/medias/{mediaId}": {
+            "delete": {
+                "tags": [
+                    "Property Medias"
+                ],
+                "summary": "Supprimer un média d'une annonce",
+                "operationId": "ce16d34edcaed4beabe3babf8b0e3821",
+                "parameters": [
+                    {
+                        "name": "id",
+                        "in": "path",
+                        "required": true,
+                        "schema": {
+                            "type": "integer",
+                            "example": 1
+                        }
+                    },
+                    {
+                        "name": "mediaId",
+                        "in": "path",
+                        "description": "ID du média à supprimer",
+                        "required": true,
+                        "schema": {
+                            "type": "integer",
+                            "example": 3
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Média supprimé"
+                    },
+                    "403": {
+                        "description": "Non autorisé"
+                    },
+                    "422": {
+                        "description": "Impossible — au moins une photo requise"
+                    }
+                },
+                "security": [
+                    {
+                        "sanctum": []
+                    }
+                ]
+            }
+        },
+        "/api/properties/{id}/medias/{mediaId}/principal": {
+            "post": {
+                "tags": [
+                    "Property Medias"
+                ],
+                "summary": "Définir un média comme photo principale de l'annonce",
+                "operationId": "7c46a32ae92f7f435ba6259b3bd03994",
+                "parameters": [
+                    {
+                        "name": "id",
+                        "in": "path",
+                        "required": true,
+                        "schema": {
+                            "type": "integer",
+                            "example": 1
+                        }
+                    },
+                    {
+                        "name": "mediaId",
+                        "in": "path",
+                        "description": "ID de l'image à définir comme principale (doit être de type image)",
+                        "required": true,
+                        "schema": {
+                            "type": "integer",
+                            "example": 2
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Photo principale mise à jour"
+                    },
+                    "403": {
+                        "description": "Non autorisé"
+                    },
+                    "422": {
+                        "description": "Média introuvable ou n'est pas une image"
+                    }
+                },
+                "security": [
+                    {
+                        "sanctum": []
+                    }
+                ]
+            }
+        },
+        "/api/properties/{id}/medias/reorder": {
+            "post": {
+                "tags": [
+                    "Property Medias"
+                ],
+                "summary": "Réordonner les médias d'une annonce",
+                "operationId": "6704240cade2e085fd04aa21f738f07a",
+                "parameters": [
+                    {
+                        "name": "id",
+                        "in": "path",
+                        "required": true,
+                        "schema": {
+                            "type": "integer",
+                            "example": 1
+                        }
+                    }
+                ],
+                "requestBody": {
+                    "required": true,
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "required": [
+                                    "ordered_ids"
+                                ],
+                                "properties": {
+                                    "ordered_ids": {
+                                        "description": "IDs des médias dans le nouvel ordre souhaité",
+                                        "type": "array",
+                                        "items": {
+                                            "type": "integer"
+                                        },
+                                        "example": [
+                                            3,
+                                            1,
+                                            4,
+                                            2
+                                        ]
+                                    }
+                                },
+                                "type": "object"
+                            }
+                        }
+                    }
+                },
+                "responses": {
+                    "200": {
+                        "description": "Médias réordonnés"
+                    },
+                    "403": {
+                        "description": "Non autorisé"
+                    }
+                },
+                "security": [
+                    {
+                        "sanctum": []
+                    }
+                ]
+            }
+        },
+        "/api/signalements": {
+            "post": {
+                "tags": [
+                    "Signalements"
+                ],
+                "summary": "Faire un signalement",
+                "operationId": "1cef0a98122b3b522b3acde3044deee4",
+                "requestBody": {
+                    "required": true,
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "required": [
+                                    "motif",
+                                    "description",
+                                    "type_signalement"
+                                ],
+                                "properties": {
+                                    "motif": {
+                                        "type": "string",
+                                        "example": "Annonce frauduleuse"
+                                    },
+                                    "description": {
+                                        "type": "string",
+                                        "example": "Les photos ne correspondent pas à la réalité..."
+                                    },
+                                    "type_signalement": {
+                                        "type": "string",
+                                        "enum": [
+                                            "proprietaire",
+                                            "utilisateur",
+                                            "annonce",
+                                            "fraude",
+                                            "autre"
+                                        ]
+                                    },
+                                    "id_property": {
+                                        "description": "ID de l'annonce signalée",
+                                        "type": "integer",
+                                        "nullable": true
+                                    },
+                                    "id_user_signale": {
+                                        "description": "ID de l'utilisateur signalé",
+                                        "type": "integer",
+                                        "nullable": true
+                                    }
+                                },
+                                "type": "object"
+                            }
+                        }
+                    }
+                },
+                "responses": {
+                    "201": {
+                        "description": "Signalement envoyé"
+                    },
+                    "422": {
+                        "description": "Validation échouée"
+                    }
+                },
+                "security": [
+                    {
+                        "sanctum": []
+                    }
+                ]
+            }
+        },
+        "/api/admin/signalements": {
+            "get": {
+                "tags": [
+                    "Signalements"
+                ],
+                "summary": "Tous les signalements (admin)",
+                "operationId": "caa2c4bc9de0f95c1837bd1318d81613",
+                "parameters": [
+                    {
+                        "name": "status",
+                        "in": "query",
+                        "required": false,
+                        "schema": {
+                            "type": "string",
+                            "enum": [
+                                "en_attente",
+                                "en_cours",
+                                "traité",
+                                "rejeté"
+                            ]
+                        }
+                    },
+                    {
+                        "name": "type_signalement",
+                        "in": "query",
+                        "required": false,
+                        "schema": {
+                            "type": "string",
+                            "enum": [
+                                "proprietaire",
+                                "utilisateur",
+                                "annonce",
+                                "fraude",
+                                "autre"
+                            ]
+                        }
+                    },
+                    {
+                        "name": "per_page",
+                        "in": "query",
+                        "required": false,
+                        "schema": {
+                            "type": "integer",
+                            "default": 15
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Liste des signalements"
+                    },
+                    "403": {
+                        "description": "Non autorisé"
+                    }
+                },
+                "security": [
+                    {
+                        "sanctum": []
+                    }
+                ]
+            }
+        },
+        "/api/admin/signalements/{id}/treat": {
+            "patch": {
+                "tags": [
+                    "Signalements"
+                ],
+                "summary": "Traiter un signalement (admin)",
+                "operationId": "a113d022ac01c26223a0fe93818019e6",
+                "parameters": [
+                    {
+                        "name": "id",
+                        "in": "path",
+                        "required": true,
+                        "schema": {
+                            "type": "integer"
+                        }
+                    }
+                ],
+                "requestBody": {
+                    "required": true,
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "required": [
+                                    "status"
+                                ],
+                                "properties": {
+                                    "status": {
+                                        "type": "string",
+                                        "enum": [
+                                            "en_attente",
+                                            "en_cours",
+                                            "traité",
+                                            "rejeté"
+                                        ]
+                                    },
+                                    "note_admin": {
+                                        "type": "string",
+                                        "example": "Annonce supprimée suite à vérification.",
+                                        "nullable": true
+                                    }
+                                },
+                                "type": "object"
+                            }
+                        }
+                    }
+                },
+                "responses": {
+                    "200": {
+                        "description": "Signalement traité"
+                    },
+                    "403": {
+                        "description": "Non autorisé"
+                    },
+                    "404": {
+                        "description": "Introuvable"
+                    }
+                },
+                "security": [
+                    {
+                        "sanctum": []
+                    }
+                ]
+            }
+        },
+        "/api/support/tickets": {
+            "get": {
+                "tags": [
+                    "Support"
+                ],
+                "summary": "Mes tickets de support",
+                "operationId": "45c7216497473c3d2ca5989d12b2f67b",
+                "parameters": [
+                    {
+                        "name": "per_page",
+                        "in": "query",
+                        "required": false,
+                        "schema": {
+                            "type": "integer",
+                            "default": 15
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Liste des tickets"
+                    }
+                },
+                "security": [
+                    {
+                        "sanctum": []
+                    }
+                ]
+            },
+            "post": {
+                "tags": [
+                    "Support"
+                ],
+                "summary": "Créer un ticket de support",
+                "operationId": "382a8b3e11ed0a8f753d1470ccb467f6",
+                "requestBody": {
+                    "required": true,
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "required": [
+                                    "sujet",
+                                    "message",
+                                    "categorie"
+                                ],
+                                "properties": {
+                                    "sujet": {
+                                        "type": "string",
+                                        "example": "Problème avec mon annonce"
+                                    },
+                                    "message": {
+                                        "type": "string",
+                                        "example": "Mon annonce n'apparaît pas dans les résultats..."
+                                    },
+                                    "categorie": {
+                                        "type": "string",
+                                        "enum": [
+                                            "technique",
+                                            "facturation",
+                                            "logement",
+                                            "fraude",
+                                            "general"
+                                        ]
+                                    },
+                                    "canal_preference": {
+                                        "type": "string",
+                                        "enum": [
+                                            "email",
+                                            "whatsapp",
+                                            "appel"
+                                        ]
+                                    },
+                                    "telephone_contact": {
+                                        "type": "string",
+                                        "example": "+22997000000"
+                                    }
+                                },
+                                "type": "object"
+                            }
+                        }
+                    }
+                },
+                "responses": {
+                    "201": {
+                        "description": "Ticket créé"
+                    },
+                    "422": {
+                        "description": "Validation échouée"
+                    }
+                },
+                "security": [
+                    {
+                        "sanctum": []
+                    }
+                ]
+            }
+        },
+        "/api/support/tickets/{id}/respond": {
+            "post": {
+                "tags": [
+                    "Support"
+                ],
+                "summary": "Répondre à un ticket (admin)",
+                "operationId": "fe35e7f546780a863b4dfedba6a4da2c",
+                "parameters": [
+                    {
+                        "name": "id",
+                        "in": "path",
+                        "required": true,
+                        "schema": {
+                            "type": "integer"
+                        }
+                    }
+                ],
+                "requestBody": {
+                    "required": true,
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "required": [
+                                    "reponse"
+                                ],
+                                "properties": {
+                                    "reponse": {
+                                        "type": "string",
+                                        "example": "Bonjour, votre annonce a bien été publiée..."
+                                    }
+                                },
+                                "type": "object"
+                            }
+                        }
+                    }
+                },
+                "responses": {
+                    "200": {
+                        "description": "Réponse envoyée"
+                    },
+                    "403": {
+                        "description": "Non autorisé"
+                    },
+                    "404": {
+                        "description": "Ticket introuvable"
+                    }
+                },
+                "security": [
+                    {
+                        "sanctum": []
+                    }
+                ]
+            }
+        },
+        "/api/support/tickets/{id}/close": {
+            "patch": {
+                "tags": [
+                    "Support"
+                ],
+                "summary": "Fermer un ticket (admin)",
+                "operationId": "f023490775c954898158b1a216560554",
+                "parameters": [
+                    {
+                        "name": "id",
+                        "in": "path",
+                        "required": true,
+                        "schema": {
+                            "type": "integer"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Ticket fermé"
+                    },
+                    "403": {
+                        "description": "Non autorisé"
+                    },
+                    "404": {
+                        "description": "Ticket introuvable"
+                    }
+                },
+                "security": [
+                    {
+                        "sanctum": []
+                    }
+                ]
+            }
+        },
+        "/api/admin/support/tickets": {
+            "get": {
+                "tags": [
+                    "Support"
+                ],
+                "summary": "Tous les tickets (admin)",
+                "operationId": "debca835cb422195ee0ec17b5e0ec3f0",
+                "parameters": [
+                    {
+                        "name": "status",
+                        "in": "query",
+                        "required": false,
+                        "schema": {
+                            "type": "string",
+                            "enum": [
+                                "ouvert",
+                                "en_cours",
+                                "fermé"
+                            ]
+                        }
+                    },
+                    {
+                        "name": "categorie",
+                        "in": "query",
+                        "required": false,
+                        "schema": {
+                            "type": "string",
+                            "enum": [
+                                "technique",
+                                "facturation",
+                                "logement",
+                                "fraude",
+                                "general"
+                            ]
+                        }
+                    },
+                    {
+                        "name": "per_page",
+                        "in": "query",
+                        "required": false,
+                        "schema": {
+                            "type": "integer",
+                            "default": 15
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Tous les tickets"
+                    },
+                    "403": {
+                        "description": "Non autorisé"
+                    }
+                },
+                "security": [
+                    {
+                        "sanctum": []
+                    }
+                ]
+            }
+        },
+        "/api/user/profile": {
+            "get": {
+                "tags": [
+                    "User"
+                ],
+                "summary": "Mon profil",
+                "operationId": "695a5ba8ff7a490aad2bed007b5499f9",
+                "responses": {
+                    "200": {
+                        "description": "Profil utilisateur"
+                    }
+                },
+                "security": [
+                    {
+                        "sanctum": []
+                    }
+                ]
+            },
+            "put": {
+                "tags": [
+                    "User"
+                ],
+                "summary": "Mettre à jour mon profil",
+                "operationId": "ef8cff62e38652f6c244cdc2f0cdadb4",
+                "requestBody": {
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "properties": {
+                                    "name": {
+                                        "type": "string"
+                                    },
+                                    "email": {
+                                        "type": "string",
+                                        "format": "email"
+                                    },
+                                    "phone": {
+                                        "type": "string"
+                                    },
+                                    "adress": {
+                                        "type": "string"
+                                    },
+                                    "preferences": {
+                                        "type": "string"
+                                    }
+                                },
+                                "type": "object"
+                            }
+                        }
+                    }
+                },
+                "responses": {
+                    "200": {
+                        "description": "Profil mis à jour"
+                    },
+                    "422": {
+                        "description": "Validation échouée"
+                    }
+                },
+                "security": [
+                    {
+                        "sanctum": []
+                    }
+                ]
+            }
+        },
+        "/api/user/avatar": {
+            "post": {
+                "tags": [
+                    "User"
+                ],
+                "summary": "Upload avatar",
+                "operationId": "3a24ea04ae96264eee7e82e1e93e936d",
+                "requestBody": {
+                    "required": true,
+                    "content": {
+                        "multipart/form-data": {
+                            "schema": {
+                                "properties": {
+                                    "avatar": {
+                                        "type": "string",
+                                        "format": "binary"
+                                    }
+                                },
+                                "type": "object"
+                            }
+                        }
+                    }
+                },
+                "responses": {
+                    "200": {
+                        "description": "Avatar mis à jour"
+                    },
+                    "422": {
+                        "description": "Fichier invalide"
+                    }
+                },
+                "security": [
+                    {
+                        "sanctum": []
+                    }
+                ]
+            },
+            "delete": {
+                "tags": [
+                    "User"
+                ],
+                "summary": "Supprimer avatar",
+                "operationId": "1273a089f49cf742902ca57976a630e6",
+                "responses": {
+                    "200": {
+                        "description": "Avatar supprimé"
+                    }
+                },
+                "security": [
+                    {
+                        "sanctum": []
+                    }
+                ]
+            }
+        },
+        "/api/user/account": {
+            "delete": {
+                "tags": [
+                    "User"
+                ],
+                "summary": "Supprimer mon compte",
+                "operationId": "7b3e247012567b8ba95773a7716c4811",
+                "responses": {
+                    "200": {
+                        "description": "Compte supprimé"
+                    }
+                },
+                "security": [
+                    {
+                        "sanctum": []
+                    }
+                ]
+            }
+        },
+        "/api/user/restore/{id}": {
+            "post": {
+                "tags": [
+                    "User"
+                ],
+                "summary": "Restaurer un compte supprimé (admin)",
+                "operationId": "ad22bc167f4e55cc90fd5e02ce2e4975",
+                "parameters": [
+                    {
+                        "name": "id",
+                        "in": "path",
+                        "required": true,
+                        "schema": {
+                            "type": "integer"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Compte restauré"
+                    },
+                    "403": {
+                        "description": "Non autorisé"
+                    },
+                    "404": {
+                        "description": "Compte introuvable"
                     }
                 },
                 "security": [
@@ -300,8 +3036,52 @@
     },
     "tags": [
         {
+            "name": "Abonnements",
+            "description": "Gestion des abonnements propriétaires"
+        },
+        {
+            "name": "Admin",
+            "description": "Back-office administrateur"
+        },
+        {
             "name": "Authentication",
-            "description": "API Endpoints for user authentication"
+            "description": "Endpoints d'authentification"
+        },
+        {
+            "name": "Chercheur",
+            "description": "Fonctionnalités pour les chercheurs de logement"
+        },
+        {
+            "name": "Contacts",
+            "description": "Déblocage des contacts propriétaires"
+        },
+        {
+            "name": "Paiements",
+            "description": "Historique et gestion des paiements"
+        },
+        {
+            "name": "Properties",
+            "description": "Gestion des annonces immobilières"
+        },
+        {
+            "name": "Property Medias",
+            "description": "Gestion des médias (photos et vidéos) des annonces"
+        },
+        {
+            "name": "Signalements",
+            "description": "Signalements d'abus ou de fraudes"
+        },
+        {
+            "name": "Support",
+            "description": "Tickets de support client"
+        },
+        {
+            "name": "User",
+            "description": "Gestion du profil utilisateur"
+        },
+        {
+            "name": "Notifications",
+            "description": "Notifications"
         }
     ]
 }
