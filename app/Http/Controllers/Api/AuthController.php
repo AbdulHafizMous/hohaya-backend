@@ -169,9 +169,13 @@ class AuthController extends Controller
     )]
     public function forgotPassword(Request $request)
     {
+        \Log::info('début de la méthode forgotPassword pour l\'email: ' . $request->email);
         $request->validate(['email' => 'required|email']);
 
+        \Log::info('email validé: ' . $request->email);
+
         Password::sendResetLink($request->only('email'));
+        \Log::info('Password reset link sent to: ' . $request->email);
 
         return response()->json(['message' => 'Reset link sent']);
     }
