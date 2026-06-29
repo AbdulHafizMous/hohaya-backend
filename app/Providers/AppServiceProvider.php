@@ -4,6 +4,7 @@ namespace App\Providers;
 
 use Illuminate\Support\Facades\Schema;
 use Illuminate\Support\ServiceProvider;
+use Illuminate\Auth\Notifications\ResetPassword;
 
 class AppServiceProvider extends ServiceProvider
 {
@@ -21,6 +22,14 @@ class AppServiceProvider extends ServiceProvider
     public function boot(): void
     {
         Schema::defaultStringLength(191);
+
+        ResetPassword::createUrlUsing(function ($user, string $token) {
+        return env('FRONTEND_URL')
+            . '/auth/reset-password?token='
+            . $token
+            . '&email='
+            . urlencode($user->email);
+    });
         //
     }
 }
