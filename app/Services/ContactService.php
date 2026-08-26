@@ -188,7 +188,15 @@ class ContactService
             ]);
 
             if ($user->email) {
-                $user->notify(new ContactDebloqueNotification($paiement->property, $paiement->property->proprietaire));
+                try {
+                    $user->notify(new ContactDebloqueNotification($paiement->property, $paiement->property->proprietaire));
+                } catch (\Throwable $e) {
+                    // L'envoi de l'email ne doit jamais faire échouer le déblocage du contact déjà payé.
+                    Log::error('Échec envoi email contact débloqué', [
+                        'user_id' => $user->id,
+                        'message' => $e->getMessage(),
+                    ]);
+                }
             }
 
             return $this->getContactInfo($user, $paiement->property);
