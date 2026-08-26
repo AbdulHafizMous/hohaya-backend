@@ -5,12 +5,16 @@ namespace App\Notifications;
 use App\Models\Property;
 use App\Models\User;
 use Illuminate\Bus\Queueable;
+use Illuminate\Contracts\Queue\ShouldQueue;
 use Illuminate\Notifications\Messages\MailMessage;
 use Illuminate\Notifications\Notification;
 
-class ContactDebloqueNotification extends Notification
+class ContactDebloqueNotification extends Notification implements ShouldQueue
 {
     use Queueable;
+
+    public int $tries = 3;
+    public int $timeout = 15;
 
     public function __construct(private Property $property, private User $proprietaire) {}
 
