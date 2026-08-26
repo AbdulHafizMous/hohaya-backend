@@ -17,7 +17,7 @@ class ContactController extends Controller
     #[OA\Post(
         path: '/api/contacts/initier',
         summary: 'Initier le déblocage d\'un contact propriétaire (étape 1)',
-        description: 'Si l\'utilisateur a déjà payé, retourne directement le contact. Sinon, retourne les infos de paiement KKiaPay.',
+        description: 'Si l\'utilisateur a déjà payé, retourne directement le contact. Sinon, retourne les infos de paiement FedaPay.',
         security: [['sanctum' => []]],
         tags: ['Contacts'],
         requestBody: new OA\RequestBody(
@@ -32,7 +32,7 @@ class ContactController extends Controller
         ),
         responses: [
             new OA\Response(response: 200,
-                description: 'Contact retourné directement (déjà payé) ou informations de paiement KKiaPay'),
+                description: 'Contact retourné directement (déjà payé) ou informations de paiement FedaPay'),
             new OA\Response(response: 422, description: 'Annonce invalide'),
         ]
     )]
@@ -44,6 +44,55 @@ class ContactController extends Controller
 
         try {
             $result = $this->contactService->initierDeblocage($request->user(), $request->property_id);
+            return $this->sendApiResponse($result,
+                isset($result['access']) ? 'Contact disponible.' : 'Procédez au paiement pour débloquer ce contact.');
+        } catch (ValidationException $e) {
+            $errors = $e->errors();
+            return $this->sendApiResponse(['errors' => $errors], current($errors)[0], false, 422);
+        }
+    }
+
+    #[OA\Post(
+        path: '/api/contacts/guest-initier',
+        summary: 'Initier le déblocage d\'un contact sans compte (crée/retrouve un compte à partir des infos de paiement)',
+        description: 'Permet à un visiteur non connecté de payer directement pour débloquer un contact. '
+            . 'Un compte chercheur est créé (ou retrouvé s\'il existe déjà) à partir du nom et de l\'email/téléphone fournis, '
+            . 'avec un mot de passe temporaire aléatoire — l\'utilisateur pourra le définir plus tard. '
+            . 'La réponse contient un token de session pour le connecter automatiquement.',
+        tags: ['Contacts'],
+        requestBody: new OA\RequestBody(
+            required: true,
+            content: new OA\JsonContent(
+                required: ['property_id', 'name'],
+                properties: [
+                    new OA\Property(property: 'property_id', type: 'integer', example: 3),
+                    new OA\Property(property: 'name', type: 'string', example: 'Jean Dupont'),
+                    new OA\Property(property: 'email', type: 'string', format: 'email'),
+                    new OA\Property(property: 'phone', type: 'string', example: '+22997000000'),
+                ]
+            )
+        ),
+        responses: [
+            new OA\Response(response: 200, description: 'Compte connecté + infos de paiement ou contact'),
+            new OA\Response(response: 422, description: 'Validation échouée'),
+        ]
+    )]
+    public function guestInitier(Request $request): JsonResponse
+    {
+        $request->validate([
+            'property_id' => 'required|integer|exists:properties,id',
+            'name'        => 'required|string|min:2',
+            'email'       => 'required|email',
+            'phone'       => 'required|string|min:6',
+        ], [
+            'property_id.required' => 'Annonce introuvable.',
+            'name.required'        => 'Le nom est obligatoire.',
+            'email.required'       => 'L\'email est obligatoire.',
+            'phone.required'       => 'Le téléphone est obligatoire.',
+        ]);
+
+        try {
+            $result = $this->contactService->initierDeblocageInvite($request->only(['property_id', 'name', 'email', 'phone']));
             return $this->sendApiResponse($result,
                 isset($result['access']) ? 'Contact disponible.' : 'Procédez au paiement pour débloquer ce contact.');
         } catch (ValidationException $e) {
@@ -66,7 +115,7 @@ class ContactController extends Controller
                         description: 'ID du paiement retourné par /api/contacts/initier'),
                     new OA\Property(property: 'transaction_id', type: 'string',
                         example: 'kkp_txn_xyz789',
-                        description: 'Transaction ID KKiaPay après paiement réussi'),
+                        description: 'Transaction ID FedaPay après paiement réussi'),
                 ]
             )
         ),
@@ -88,7 +137,8 @@ class ContactController extends Controller
                 $request->paiement_id,
                 $request->transaction_id
             );
-            return $this->sendApiResponse($result, 'Contact débloqué avec succès.');
+            $message = isset($result['pending']) ? $result['message'] : 'Contact débloqué avec succès.';
+            return $this->sendApiResponse($result, $message);
         } catch (ValidationException $e) {
             $errors = $e->errors();
             return $this->sendApiResponse(['errors' => $errors], current($errors)[0], false, 422);

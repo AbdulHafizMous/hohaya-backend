@@ -16,7 +16,7 @@ class Paiement extends Model
         'id_abonnement'  => 'integer',
         'id_property'    => 'integer',
         'montant'        => 'float',
-        'kkiapay_response' => 'array',
+        'fedapay_response' => 'array',
         'paye_le'        => 'datetime',
         'deleted_by'     => 'integer',
         'created_by'     => 'integer',
@@ -25,7 +25,7 @@ class Paiement extends Model
 
     protected $fillable = [
         'id_user', 'type', 'status', 'montant', 'devise',
-        'kkiapay_transaction_id', 'kkiapay_reference', 'kkiapay_response',
+        'fedapay_transaction_id', 'fedapay_reference', 'fedapay_response',
         'id_abonnement', 'id_property',
         'telephone_paiement', 'operateur',
         'raison_echec', 'paye_le',

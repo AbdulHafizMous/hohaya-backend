@@ -38,7 +38,7 @@ class ChercheurService
 
     public function mesFavoris(User $user, int $perPage = 15): LengthAwarePaginator
     {
-        return Favori::with(['property.mediaPrincipal'])
+        return Favori::with(['property.medias', 'property.mediaPrincipal'])
             ->where('id_user', $user->id)
             ->latest()
             ->paginate($perPage);

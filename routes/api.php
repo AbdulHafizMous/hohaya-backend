@@ -5,11 +5,12 @@ use App\Http\Controllers\Api\AdminController;
 use App\Http\Controllers\Api\AuthController;
 use App\Http\Controllers\Api\ChercheurController;
 use App\Http\Controllers\Api\ContactController;
-use App\Http\Controllers\Api\KKiaPayWebhookController;
+use App\Http\Controllers\Api\FedaPayWebhookController;
 use App\Http\Controllers\Api\NotificationController;
 use App\Http\Controllers\Api\PaiementController;
 use App\Http\Controllers\Api\PropertyController;
 use App\Http\Controllers\Api\PropertyMediaController;
+use App\Http\Controllers\Api\ReservationController;
 use App\Http\Controllers\Api\SignalementController;
 use App\Http\Controllers\Api\SupportTicketController;
 use App\Http\Controllers\Api\UserController;
@@ -40,6 +41,7 @@ Route::middleware('api')->group(function () {
     Route::prefix('user')->middleware('auth:sanctum')->group(function () {
         Route::get('/profile',       [UserController::class, 'profile']);
         Route::put('/profile',       [UserController::class, 'update']);
+        Route::put('/password',      [UserController::class, 'updatePassword']);
         Route::post('/avatar',       [UserController::class, 'uploadAvatar']);
         Route::delete('/avatar',     [UserController::class, 'deleteAvatar']);
         Route::delete('/account',    [UserController::class, 'deleteAccount']);
@@ -83,17 +85,25 @@ Route::middleware('api')->group(function () {
     });
 
     // ── Contacts (déblocage propriétaire) ─────────────────────────────────────
+    Route::post('/contacts/guest-initier', [ContactController::class, 'guestInitier']);
     Route::prefix('contacts')->middleware('auth:sanctum')->group(function () {
         Route::post('/initier',   [ContactController::class, 'initier']);
         Route::post('/confirmer', [ContactController::class, 'confirmer']);
         Route::get('/historique', [ContactController::class, 'historique']);
     });
 
+    // ── Réservations (paiement de l'avance) ─────────────────────────────────────
+    Route::post('/reservations/guest-initier', [ReservationController::class, 'guestInitier']);
+    Route::prefix('reservations')->middleware('auth:sanctum')->group(function () {
+        Route::post('/initier',   [ReservationController::class, 'initier']);
+        Route::post('/confirmer', [ReservationController::class, 'confirmer']);
+    });
+
     // ── Paiements ─────────────────────────────────────────────────────────────
     Route::get('/paiements', [PaiementController::class, 'index'])->middleware('auth:sanctum');
 
-    // ── Webhook KKiaPay (sans auth — appelé directement par KKiaPay) ──────────
-    Route::post('/webhooks/kkiapay', [KKiaPayWebhookController::class, 'handle']);
+    // ── Webhook FedaPay (sans auth — appelé directement par FedaPay) ──────────
+    Route::post('/webhooks/fedapay', [FedaPayWebhookController::class, 'handle']);
 
     // ── Chercheur — favoris & visites ─────────────────────────────────────────
     Route::prefix('chercheur')->middleware('auth:sanctum')->group(function () {
@@ -108,6 +118,7 @@ Route::middleware('api')->group(function () {
     Route::prefix('owner')->middleware('auth:sanctum')->group(function () {
         Route::get('/visites',                  [ChercheurController::class, 'visitesRecues']);
         Route::patch('/visites/{id}/repondre',  [ChercheurController::class, 'repondreVisite']);
+        Route::get('/locataires',               [ReservationController::class, 'locatairesProprietaire']);
     });
 
     // ── Support tickets ───────────────────────────────────────────────────────
@@ -142,6 +153,9 @@ Route::middleware('api')->group(function () {
         // Modération annonces
         Route::get('/properties/pending', [AdminController::class, 'annoncesEnAttente']);
 
+        // Locataires
+        Route::get('/locataires', [ReservationController::class, 'locatairesAdmin']);
+
         // Paiements
         Route::get('/paiements', [PaiementController::class, 'adminIndex']);
 
@@ -153,5 +167,13 @@ Route::middleware('api')->group(function () {
         // Exports CSV
         Route::get('/export/paiements', [AdminController::class, 'exportPaiements']);
         Route::get('/export/users',     [AdminController::class, 'exportUsers']);
+
+        // Gestion des tarifs d'abonnement
+        Route::get('/tarifs',           [AdminController::class, 'tarifs']);
+        Route::patch('/tarifs/{type}',  [AdminController::class, 'updateTarif']);
+
+        // Paramètres généraux
+        Route::get('/settings',                    [AdminController::class, 'settings']);
+        Route::patch('/settings/deblocage-prix',    [AdminController::class, 'updateDeblocagePrix']);
     });
 });

@@ -72,8 +72,8 @@ class AbonnementController extends Controller
 
     #[OA\Post(
         path: '/api/abonnements/initier',
-        summary: 'Initier un abonnement (étape 1 — avant paiement KKiaPay)',
-        description: 'Crée un abonnement en attente et retourne les informations nécessaires au SDK KKiaPay côté frontend.',
+        summary: 'Initier un abonnement (étape 1 — avant paiement FedaPay)',
+        description: 'Crée un abonnement en attente et retourne les informations nécessaires au SDK FedaPay côté frontend.',
         security: [['sanctum' => []]],
         tags: ['Abonnements'],
         requestBody: new OA\RequestBody(
@@ -93,7 +93,7 @@ class AbonnementController extends Controller
         ),
         responses: [
             new OA\Response(response: 200,
-                description: 'Abonnement initié. Utilisez kkiapay_public_key + montant pour payer via le SDK KKiaPay.'),
+                description: 'Abonnement initié. Utilisez fedapay_public_key + montant pour payer via le SDK FedaPay.'),
             new OA\Response(response: 422, description: 'Abonnement déjà actif ou type invalide'),
         ]
     )]
@@ -109,7 +109,7 @@ class AbonnementController extends Controller
 
         try {
             $result = $this->abonnementService->initier($request->user(), $request->type);
-            return $this->sendApiResponse($result, 'Abonnement initié. Procédez au paiement KKiaPay.');
+            return $this->sendApiResponse($result, 'Abonnement initié. Procédez au paiement FedaPay.');
         } catch (ValidationException $e) {
             $errors = $e->errors();
             return $this->sendApiResponse(['errors' => $errors], current($errors)[0], false, 422);
@@ -118,8 +118,8 @@ class AbonnementController extends Controller
 
     #[OA\Post(
         path: '/api/abonnements/confirmer',
-        summary: 'Confirmer un abonnement après paiement KKiaPay (étape 2)',
-        description: 'À appeler après que le SDK KKiaPay a retourné un transaction_id. Le backend vérifie la transaction auprès de KKiaPay et active l\'abonnement.',
+        summary: 'Confirmer un abonnement après paiement FedaPay (étape 2)',
+        description: 'À appeler après que le SDK FedaPay a retourné un transaction_id. Le backend vérifie la transaction auprès de FedaPay et active l\'abonnement.',
         security: [['sanctum' => []]],
         tags: ['Abonnements'],
         requestBody: new OA\RequestBody(
@@ -131,13 +131,13 @@ class AbonnementController extends Controller
                         description: 'ID du paiement retourné par /api/abonnements/initier'),
                     new OA\Property(property: 'transaction_id', type: 'string',
                         example: 'kkp_txn_abc123def456',
-                        description: 'Transaction ID retourné par le SDK KKiaPay après paiement réussi'),
+                        description: 'Transaction ID retourné par le SDK FedaPay après paiement réussi'),
                 ]
             )
         ),
         responses: [
             new OA\Response(response: 200, description: 'Abonnement activé avec succès'),
-            new OA\Response(response: 422, description: 'Paiement invalide ou transaction KKiaPay non confirmée'),
+            new OA\Response(response: 422, description: 'Paiement invalide ou transaction FedaPay non confirmée'),
         ]
     )]
     public function confirmer(Request $request): JsonResponse

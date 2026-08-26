@@ -8,6 +8,7 @@ use App\Http\Requests\User\UploadAvatarRequest;
 use App\Services\UserService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Hash;
 use Illuminate\Validation\ValidationException;
 use OpenApi\Attributes as OA;
 
@@ -131,5 +132,54 @@ class UserController extends Controller
         } catch (\Illuminate\Database\Eloquent\ModelNotFoundException) {
             return $this->sendApiResponse(null, 'Compte introuvable.', false, 404);
         }
+    }
+
+    #[OA\Put(
+        path: '/api/user/password',
+        summary: 'Changer mon mot de passe',
+        security: [['sanctum' => []]],
+        tags: ['User'],
+        requestBody: new OA\RequestBody(required: true, content: new OA\JsonContent(
+            required: ['current_password', 'password', 'password_confirmation'],
+            properties: [
+                new OA\Property(property: 'current_password', type: 'string', format: 'password'),
+                new OA\Property(property: 'password', type: 'string', format: 'password'),
+                new OA\Property(property: 'password_confirmation', type: 'string', format: 'password'),
+            ]
+        )),
+        responses: [
+            new OA\Response(response: 200, description: 'Mot de passe mis à jour'),
+            new OA\Response(response: 422, description: 'Mot de passe actuel incorrect ou validation échouée'),
+        ]
+    )]
+    public function updatePassword(Request $request): JsonResponse
+    {
+        $request->validate([
+            'current_password' => ['required', 'string'],
+            'password'          => ['required', 'string', 'min:8', 'confirmed'],
+        ], [
+            'current_password.required' => 'Le mot de passe actuel est obligatoire.',
+            'password.required'         => 'Le nouveau mot de passe est obligatoire.',
+            'password.min'              => 'Le nouveau mot de passe doit contenir au moins 8 caractères.',
+            'password.confirmed'        => 'La confirmation ne correspond pas au nouveau mot de passe.',
+        ]);
+
+        $user = $request->user();
+
+        if (!Hash::check($request->input('current_password'), $user->password)) {
+            return $this->sendApiResponse(
+                ['errors' => ['current_password' => ['Le mot de passe actuel est incorrect.']]],
+                'Le mot de passe actuel est incorrect.',
+                false,
+                422
+            );
+        }
+
+        $user->update([
+            'password'   => Hash::make($request->input('password')),
+            'updated_by' => $user->id,
+        ]);
+
+        return $this->sendApiResponse(null, 'Mot de passe mis à jour avec succès.');
     }
 }

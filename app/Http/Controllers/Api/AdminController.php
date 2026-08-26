@@ -256,4 +256,123 @@ class AdminController extends Controller
             'Content-Disposition' => "attachment; filename=\"{$filename}\"",
         ]);
     }
+
+    #[OA\Get(
+        path: '/api/admin/tarifs',
+        summary: 'Liste complète des tarifs d\'abonnement (actifs et inactifs)',
+        security: [['sanctum' => []]],
+        tags: ['Admin'],
+        responses: [
+            new OA\Response(response: 200, description: 'Tarifs récupérés'),
+            new OA\Response(response: 403, description: 'Non autorisé'),
+        ]
+    )]
+    public function tarifs(Request $request): JsonResponse
+    {
+        if ($err = $this->checkAdmin($request)) return $err;
+
+        $tarifs = \App\Models\TarifAbonnement::orderByRaw(
+            "FIELD(type, 'mensuel', 'trimestriel', 'semestriel', 'annuel')"
+        )->get();
+
+        return $this->sendApiResponse($tarifs, 'Tarifs récupérés.');
+    }
+
+    #[OA\Patch(
+        path: '/api/admin/tarifs/{type}',
+        summary: 'Modifier un tarif d\'abonnement (montant, description, actif)',
+        security: [['sanctum' => []]],
+        tags: ['Admin'],
+        parameters: [
+            new OA\Parameter(name: 'type', in: 'path', required: true,
+                description: 'Type d\'abonnement (mensuel, trimestriel, semestriel, annuel)',
+                schema: new OA\Schema(type: 'string')),
+        ],
+        requestBody: new OA\RequestBody(content: new OA\JsonContent(properties: [
+            new OA\Property(property: 'montant', type: 'number', example: 5000),
+            new OA\Property(property: 'devise', type: 'string', example: 'XOF'),
+            new OA\Property(property: 'description', type: 'string', nullable: true),
+            new OA\Property(property: 'is_actif', type: 'boolean'),
+        ])),
+        responses: [
+            new OA\Response(response: 200, description: 'Tarif mis à jour'),
+            new OA\Response(response: 403, description: 'Non autorisé'),
+            new OA\Response(response: 422, description: 'Type invalide'),
+        ]
+    )]
+    public function updateTarif(Request $request, string $type): JsonResponse
+    {
+        if ($err = $this->checkAdmin($request)) return $err;
+
+        if (!in_array($type, \App\Enums\AbonnementType::values(), true)) {
+            return $this->sendApiResponse(null, 'Type d\'abonnement invalide.', false, 422);
+        }
+
+        $exists = \App\Models\TarifAbonnement::where('type', $type)->exists();
+
+        $request->validate([
+            'montant'     => [$exists ? 'sometimes' : 'required', 'numeric', 'min:0'],
+            'devise'      => ['sometimes', 'string', 'max:10'],
+            'description' => ['sometimes', 'nullable', 'string', 'max:1000'],
+            'is_actif'    => ['sometimes', 'boolean'],
+        ]);
+
+        $tarif = \App\Models\TarifAbonnement::updateOrCreate(
+            ['type' => $type],
+            array_merge(['devise' => 'XOF', 'is_actif' => true], $request->only(['montant', 'devise', 'description', 'is_actif']))
+        );
+
+        return $this->sendApiResponse($tarif, 'Tarif mis à jour.');
+    }
+
+    #[OA\Get(
+        path: '/api/admin/settings',
+        summary: 'Paramètres généraux modifiables (ex: prix de déblocage contact)',
+        security: [['sanctum' => []]],
+        tags: ['Admin'],
+        responses: [
+            new OA\Response(response: 200, description: 'Paramètres récupérés'),
+            new OA\Response(response: 403, description: 'Non autorisé'),
+        ]
+    )]
+    public function settings(Request $request): JsonResponse
+    {
+        if ($err = $this->checkAdmin($request)) return $err;
+
+        return $this->sendApiResponse([
+            'deblocage_contact_prix' => (float) \App\Models\Setting::get(
+                'deblocage_contact_prix',
+                (string) config('fedapay.deblocage_prix', 500)
+            ),
+        ], 'Paramètres récupérés.');
+    }
+
+    #[OA\Patch(
+        path: '/api/admin/settings/deblocage-prix',
+        summary: 'Modifier le prix de déblocage d\'un contact propriétaire',
+        security: [['sanctum' => []]],
+        tags: ['Admin'],
+        requestBody: new OA\RequestBody(required: true, content: new OA\JsonContent(
+            required: ['montant'],
+            properties: [new OA\Property(property: 'montant', type: 'number', example: 500)]
+        )),
+        responses: [
+            new OA\Response(response: 200, description: 'Prix mis à jour'),
+            new OA\Response(response: 403, description: 'Non autorisé'),
+            new OA\Response(response: 422, description: 'Montant invalide'),
+        ]
+    )]
+    public function updateDeblocagePrix(Request $request): JsonResponse
+    {
+        if ($err = $this->checkAdmin($request)) return $err;
+
+        $request->validate(['montant' => 'required|numeric|min:0']);
+
+        \App\Models\Setting::set('deblocage_contact_prix', (string) $request->montant, $request->user()->id);
+
+        return $this->sendApiResponse(
+            ['deblocage_contact_prix' => (float) $request->montant],
+            'Prix de déblocage mis à jour.'
+        );
+    }
 }

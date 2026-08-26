@@ -140,7 +140,7 @@ class AdminService
 
     public function annoncesEnAttente(int $perPage = 20): LengthAwarePaginator
     {
-        return Property::with(['proprietaire', 'mediaPrincipal'])
+        return Property::with(['proprietaire', 'medias', 'mediaPrincipal'])
             ->where('is_verified', false)
             ->whereNull('deleted_at')
             ->latest()
@@ -154,7 +154,7 @@ class AdminService
             ->orderBy('paye_le', 'desc')
             ->get();
 
-        $csv = "ID,Utilisateur,Email,Type,Montant,Devise,Transaction KKiaPay,Date\n";
+        $csv = "ID,Utilisateur,Email,Type,Montant,Devise,Transaction FedaPay,Date\n";
 
         foreach ($paiements as $p) {
             $csv .= implode(',', [
@@ -164,7 +164,7 @@ class AdminService
                 $p->type,
                 $p->montant,
                 $p->devise,
-                $p->kkiapay_transaction_id ?? '',
+                $p->fedapay_transaction_id ?? '',
                 $p->paye_le?->format('d/m/Y H:i') ?? '',
             ]) . "\n";
         }

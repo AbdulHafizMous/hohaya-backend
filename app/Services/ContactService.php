@@ -7,14 +7,58 @@ use App\Enums\PaiementType;
 use App\Models\AccessContact;
 use App\Models\Paiement;
 use App\Models\Property;
+use App\Models\Setting;
 use App\Models\User;
+use App\Notifications\ContactDebloqueNotification;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\Log;
+use Illuminate\Support\Str;
 use Illuminate\Validation\ValidationException;
 
 class ContactService
 {
-    public function __construct(private KKiaPayService $kkiapay) {}
+    public function __construct(private FedaPayService $fedapay, private AuthService $authService) {}
+
+    /**
+     * Trouver ou créer un compte chercheur à partir des infos fournies au moment du paiement,
+     * sans passer par une inscription classique. L'utilisateur pourra définir un mot de passe plus tard.
+     */
+    public function findOrCreateGuest(array $data): User // Also used by ReservationService for guest reservations
+    {
+        $user = User::where(function ($q) use ($data) {
+            if (!empty($data['email'])) $q->where('email', $data['email']);
+            if (!empty($data['phone'])) $q->orWhere('phone', $data['phone']);
+        })->first();
+
+        if ($user) {
+            return $user;
+        }
+
+        $user = User::create([
+            'name'     => $data['name'],
+            'email'    => $data['email'] ?? null,
+            'phone'    => $data['phone'] ?? null,
+            'password' => Hash::make(Str::random(32)),
+        ]);
+
+        $user->assignRole('seeker');
+
+        return $user;
+    }
+
+    /**
+     * Initier le déblocage d'un contact pour un visiteur non connecté : crée/retrouve son compte
+     * et retourne un token de session en plus des infos de paiement, pour le connecter automatiquement.
+     */
+    public function initierDeblocageInvite(array $data): array
+    {
+        $user = $this->findOrCreateGuest($data);
+        $tokens = $this->authService->issueTokensFor($user);
+        $result = $this->initierDeblocage($user, $data['property_id']);
+
+        return array_merge($tokens, $result);
+    }
 
     /**
      * Vérifier si un user a accès au contact d'une propriété
@@ -53,7 +97,7 @@ class ContactService
             return $this->getContactInfo($user, $property);
         }
 
-        $prix = (float) config('kkiapay.deblocage_prix', 500);
+        $prix = (float) Setting::get('deblocage_contact_prix', (string) config('fedapay.deblocage_prix', 500));
 
         // Créer paiement en attente
         $paiement = Paiement::create([
@@ -72,9 +116,9 @@ class ContactService
             'devise'             => 'XOF',
             'property_id'        => $property->id,
             'property_title'     => $property->title,
-            'kkiapay_public_key' => config('kkiapay.public_key'),
-            'sandbox'            => config('kkiapay.sandbox'),
-            'instructions'       => 'Payez ' . $prix . ' XOF via KKiaPay pour accéder au contact du propriétaire. Appelez ensuite POST /api/contacts/confirmer.',
+            'fedapay_public_key' => config('fedapay.public_key'),
+            'sandbox'            => config('fedapay.sandbox'),
+            'instructions'       => 'Payez ' . $prix . ' XOF via FedaPay pour accéder au contact du propriétaire. Appelez ensuite POST /api/contacts/confirmer.',
         ];
     }
 
@@ -96,14 +140,25 @@ class ContactService
             ]);
         }
 
-        // Vérifier KKiaPay
-        $transactionData = $this->kkiapay->verifyTransaction($transactionId);
+        // Vérifier FedaPay
+        $transactionData = $this->fedapay->verifyTransaction($transactionId);
 
-        if (!$this->kkiapay->isSuccessful($transactionData)) {
+        if ($this->fedapay->isPending($transactionData)) {
+            // Mobile Money : le client valide via USSD après la fermeture du widget.
+            // Ce n'est pas un échec, on garde le paiement en attente pour permettre un nouvel essai.
+            $paiement->update([
+                'fedapay_transaction_id' => $transactionId,
+                'fedapay_response'       => $transactionData,
+            ]);
+
+            return ['pending' => true, 'message' => 'Paiement en cours de confirmation, merci de patienter.'];
+        }
+
+        if (!$this->fedapay->isSuccessful($transactionData)) {
             $paiement->update([
                 'status'                 => PaiementStatus::ECHOUE->value,
-                'kkiapay_transaction_id' => $transactionId,
-                'kkiapay_response'       => $transactionData,
+                'fedapay_transaction_id' => $transactionId,
+                'fedapay_response'       => $transactionData,
                 'raison_echec'           => $transactionData['message'] ?? 'Paiement non abouti',
             ]);
 
@@ -115,9 +170,9 @@ class ContactService
         return DB::transaction(function () use ($user, $paiement, $transactionId, $transactionData) {
             $paiement->update([
                 'status'                 => PaiementStatus::SUCCES->value,
-                'kkiapay_transaction_id' => $transactionId,
-                'kkiapay_response'       => $transactionData,
-                'telephone_paiement'     => $this->kkiapay->getPhone($transactionData),
+                'fedapay_transaction_id' => $transactionId,
+                'fedapay_response'       => $transactionData,
+                'telephone_paiement'     => $this->fedapay->getPhone($transactionData),
                 'paye_le'                => now(),
             ]);
 
@@ -131,6 +186,10 @@ class ContactService
                 'user_id'     => $user->id,
                 'property_id' => $paiement->id_property,
             ]);
+
+            if ($user->email) {
+                $user->notify(new ContactDebloqueNotification($paiement->property, $paiement->property->proprietaire));
+            }
 
             return $this->getContactInfo($user, $paiement->property);
         });

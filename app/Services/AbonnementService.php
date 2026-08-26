@@ -16,7 +16,7 @@ use Illuminate\Validation\ValidationException;
 
 class AbonnementService
 {
-    public function __construct(private KKiaPayService $kkiapay) {}
+    public function __construct(private FedaPayService $fedapay) {}
 
     /**
      * Récupérer les tarifs disponibles
@@ -113,15 +113,15 @@ class AbonnementService
                 'paiement_id'   => $paiement->id,
                 'montant'       => $tarif->montant,
                 'devise'        => $tarif->devise,
-                'kkiapay_public_key' => config('kkiapay.public_key'),
-                'sandbox'       => config('kkiapay.sandbox'),
-                'instructions'  => 'Utilisez le SDK KKiaPay avec la public_key fournie pour finaliser le paiement. Après paiement, appelez POST /api/abonnements/confirmer avec le transaction_id KKiaPay.',
+                'fedapay_public_key' => config('fedapay.public_key'),
+                'sandbox'       => config('fedapay.sandbox'),
+                'instructions'  => 'Utilisez le SDK FedaPay avec la public_key fournie pour finaliser le paiement. Après paiement, appelez POST /api/abonnements/confirmer avec le transaction_id FedaPay.',
             ];
         });
     }
 
     /**
-     * Confirmer un abonnement après paiement KKiaPay réussi
+     * Confirmer un abonnement après paiement FedaPay réussi
      */
     public function confirmer(User $user, int $paiementId, string $transactionId): array
     {
@@ -136,15 +136,15 @@ class AbonnementService
             ]);
         }
 
-        // Vérifier la transaction auprès de KKiaPay
-        $transactionData = $this->kkiapay->verifyTransaction($transactionId);
+        // Vérifier la transaction auprès de FedaPay
+        $transactionData = $this->fedapay->verifyTransaction($transactionId);
 
-        if (!$this->kkiapay->isSuccessful($transactionData)) {
+        if (!$this->fedapay->isSuccessful($transactionData)) {
             // Marquer comme échoué
             $paiement->update([
                 'status'               => PaiementStatus::ECHOUE->value,
-                'kkiapay_transaction_id' => $transactionId,
-                'kkiapay_response'     => $transactionData,
+                'fedapay_transaction_id' => $transactionId,
+                'fedapay_response'     => $transactionData,
                 'raison_echec'         => $transactionData['message'] ?? 'Paiement non abouti',
             ]);
 
@@ -154,11 +154,11 @@ class AbonnementService
         }
 
         // Vérifier que le montant correspond
-        $montantKkiapay = $this->kkiapay->getAmount($transactionData);
-        if ($montantKkiapay < $paiement->montant) {
-            Log::warning('KKiaPay montant insuffisant', [
+        $montantFedapay = $this->fedapay->getAmount($transactionData);
+        if ($montantFedapay < $paiement->montant) {
+            Log::warning('FedaPay montant insuffisant', [
                 'attendu'  => $paiement->montant,
-                'recu'     => $montantKkiapay,
+                'recu'     => $montantFedapay,
                 'user_id'  => $user->id,
             ]);
 
@@ -175,10 +175,10 @@ class AbonnementService
             // Mettre à jour le paiement
             $paiement->update([
                 'status'                 => PaiementStatus::SUCCES->value,
-                'kkiapay_transaction_id' => $transactionId,
-                'kkiapay_reference'      => $transactionData['reference'] ?? null,
-                'kkiapay_response'       => $transactionData,
-                'telephone_paiement'     => $this->kkiapay->getPhone($transactionData),
+                'fedapay_transaction_id' => $transactionId,
+                'fedapay_reference'      => $transactionData['reference'] ?? null,
+                'fedapay_response'       => $transactionData,
+                'telephone_paiement'     => $this->fedapay->getPhone($transactionData),
                 'paye_le'                => now(),
             ]);
 
@@ -264,7 +264,7 @@ class AbonnementService
             'status'                 => $paiement->status,
             'montant'                => $paiement->montant,
             'devise'                 => $paiement->devise,
-            'kkiapay_transaction_id' => $paiement->kkiapay_transaction_id,
+            'fedapay_transaction_id' => $paiement->fedapay_transaction_id,
             'telephone_paiement'     => $paiement->telephone_paiement,
             'operateur'              => $paiement->operateur,
             'paye_le'                => $paiement->paye_le?->format('d/m/Y H:i'),

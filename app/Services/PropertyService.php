@@ -15,7 +15,7 @@ class PropertyService
 {
     public function list(array $filters = [], int $perPage = 15): LengthAwarePaginator
     {
-        $query = Property::with(['mediaPrincipal', 'proprietaire'])
+        $query = Property::with(['medias', 'mediaPrincipal', 'proprietaire'])
             ->where('is_verified', true)
             ->where('status', PropertyStatus::DISPONIBLE->value);
 

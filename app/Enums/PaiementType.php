@@ -6,6 +6,7 @@ enum PaiementType: string
 {
     case ABONNEMENT      = 'abonnement';       // Paiement abonnement propriétaire
     case DEBLOCAGE       = 'deblocage';        // Paiement pour débloquer contact
+    case RESERVATION     = 'reservation';      // Paiement de l'avance pour réserver un logement
 
     public static function values(): array
     {

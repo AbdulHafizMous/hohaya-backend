@@ -112,6 +112,11 @@ class AuthService
         return $this->generateTokens($user);
     }
 
+    public function issueTokensFor(User $user): array
+    {
+        return $this->generateTokens($user);
+    }
+
     private function generateTokens(User $user): array
     {
         $user->tokens()->where('name', 'access-token')->delete();
