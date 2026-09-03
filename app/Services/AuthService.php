@@ -5,11 +5,14 @@ namespace App\Services;
 use App\Models\User;
 use App\Notifications\VerifyEmailNotification;
 use Illuminate\Support\Facades\Hash;
+use Illuminate\Support\Str;
 use Illuminate\Validation\ValidationException;
 use Laravel\Sanctum\PersonalAccessToken;
 
 class AuthService
 {
+    public function __construct(private LoginCodeService $loginCodeService) {}
+
     public function register(array $data): array
     {
         // Vérifier si le compte existe mais est soft-deleted
@@ -32,13 +35,34 @@ class AuthService
 
         $role = $data['role'];
         unset($data['role'], $data['password_confirmation']);
-        $data['password'] = Hash::make($data['password']);
+
+        $isSeeker = $role === 'seeker';
+
+        // Les chercheurs n'ont pas de mot de passe à définir : compte créé avec un mot de passe
+        // aléatoire (jamais communiqué), connexion uniquement par code email.
+        $data['password'] = Hash::make($isSeeker ? Str::random(40) : $data['password']);
 
         $user = User::create($data);
         $user->assignRole($role);
+
+        if ($isSeeker) {
+            if ($user->email) {
+                $this->loginCodeService->generateAndSend($user, 'login_seeker');
+            }
+
+            return [
+                'requires_login_code' => true,
+                'email'               => $user->email,
+            ];
+        }
+
+        // Propriétaire : mot de passe défini, mais compte utilisable seulement après vérification email.
         $user->notify(new VerifyEmailNotification());
 
-        return $this->generateTokens($user);
+        return [
+            'requires_email_verification' => true,
+            'email'                       => $user->email,
+        ];
     }
 
     public function login(array $data): array
@@ -77,6 +101,71 @@ class AuthService
                 'password' => ['Mot de passe incorrect.'],
             ]);
         }
+
+        // 2FA : réservé aux owner/admin ayant activé l'option dans leurs paramètres.
+        if ($user->two_factor_enabled && !$user->isSeeker()) {
+            $this->loginCodeService->generateAndSend($user, '2fa');
+
+            return [
+                'two_factor_required' => true,
+                'user_id'             => $user->id,
+            ];
+        }
+
+        return $this->generateTokens($user);
+    }
+
+    /**
+     * Connexion par code envoyé par email, réservée aux chercheurs (seeker).
+     */
+    public function requestLoginCode(string $email): void
+    {
+        $user = User::where('email', $email)->first();
+
+        if (!$user) {
+            throw ValidationException::withMessages([
+                'email' => ['Aucun compte trouvé avec cet email.'],
+            ]);
+        }
+
+        if (!$user->isSeeker()) {
+            throw ValidationException::withMessages([
+                'email' => ['La connexion par code est réservée aux chercheurs.'],
+            ]);
+        }
+
+        $this->loginCodeService->generateAndSend($user, 'login_seeker');
+    }
+
+    public function verifyLoginCode(string $email, string $code): array
+    {
+        $user = User::where('email', $email)->first();
+
+        if (!$user) {
+            throw ValidationException::withMessages([
+                'email' => ['Aucun compte trouvé avec cet email.'],
+            ]);
+        }
+
+        $this->loginCodeService->verify($user, 'login_seeker', $code);
+
+        return $this->generateTokens($user);
+    }
+
+    /**
+     * Finalise une connexion owner/admin après vérification du mot de passe (voir login()).
+     */
+    public function verifyTwoFactor(int $userId, string $code): array
+    {
+        $user = User::find($userId);
+
+        if (!$user) {
+            throw ValidationException::withMessages([
+                'user_id' => ['Compte introuvable.'],
+            ]);
+        }
+
+        $this->loginCodeService->verify($user, '2fa', $code);
 
         return $this->generateTokens($user);
     }
@@ -144,6 +233,7 @@ class AuthService
             'adress'            => $user->adress,
             'preferences'       => $user->preferences,
             'is_verified'       => $user->is_verified,
+            'two_factor_enabled' => $user->two_factor_enabled,
             'is_suscribed'      => $user->is_suscribed,
             'email_verified_at' => $user->email_verified_at,
             'subscription_end'  => $user->subscription_end,

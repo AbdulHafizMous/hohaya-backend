@@ -208,12 +208,16 @@ class AuthController extends Controller
             return $this->sendApiResponse(null, 'Lien de vérification expiré.', false, 403);
         }
 
-        if ($user->hasVerifiedEmail()) {
-            return $this->sendApiResponse(null, 'Email déjà vérifié.');
+        if (!$user->hasVerifiedEmail()) {
+            $user->markEmailAsVerified();
         }
 
-        $user->markEmailAsVerified();
-        return $this->sendApiResponse(null, 'Email vérifié avec succès. Bienvenue sur Hohaya !');
+        // Le lien signé prouve déjà l'identité : on connecte directement l'utilisateur,
+        // pas besoin de lui redemander son mot de passe juste après.
+        return $this->sendApiResponse(
+            $this->authService->issueTokensFor($user),
+            'Email vérifié avec succès. Bienvenue sur Hohaya !'
+        );
     }
 
     #[OA\Post(path: '/api/auth/resend-verification', summary: 'Renvoyer email vérification', security: [['sanctum' => []]], tags: ['Authentication'],
@@ -227,5 +231,104 @@ class AuthController extends Controller
 
         $request->user()->notify(new VerifyEmailNotification());
         return $this->sendApiResponse(null, 'Email de vérification renvoyé.');
+    }
+
+    #[OA\Post(path: '/api/auth/login-code/request', summary: 'Demander un code de connexion (chercheurs uniquement)', tags: ['Authentication'],
+        requestBody: new OA\RequestBody(required: true, content: new OA\JsonContent(
+            required: ['email'],
+            properties: [new OA\Property(property: 'email', type: 'string', format: 'email')]
+        )),
+        responses: [
+            new OA\Response(response: 200, description: 'Code envoyé'),
+            new OA\Response(response: 422, description: 'Email invalide ou non-chercheur'),
+        ]
+    )]
+    public function requestLoginCode(Request $request): JsonResponse
+    {
+        $request->validate(['email' => 'required|email']);
+
+        try {
+            $this->authService->requestLoginCode($request->email);
+            return $this->sendApiResponse(null, 'Un code de connexion a été envoyé par email.');
+        } catch (ValidationException $e) {
+            return $this->sendApiResponse(['errors' => $e->errors()], 'Impossible d\'envoyer le code.', false, 422);
+        }
+    }
+
+    #[OA\Post(path: '/api/auth/login-code/verify', summary: 'Se connecter avec le code reçu par email (chercheurs)', tags: ['Authentication'],
+        requestBody: new OA\RequestBody(required: true, content: new OA\JsonContent(
+            required: ['email', 'code'],
+            properties: [
+                new OA\Property(property: 'email', type: 'string', format: 'email'),
+                new OA\Property(property: 'code', type: 'string', example: '123456'),
+            ]
+        )),
+        responses: [
+            new OA\Response(response: 200, description: 'Connexion réussie'),
+            new OA\Response(response: 422, description: 'Code invalide ou expiré'),
+        ]
+    )]
+    public function verifyLoginCode(Request $request): JsonResponse
+    {
+        $request->validate(['email' => 'required|email', 'code' => 'required|string']);
+
+        try {
+            $result = $this->authService->verifyLoginCode($request->email, $request->code);
+            return $this->sendApiResponse($result, 'Connexion réussie.');
+        } catch (ValidationException $e) {
+            return $this->sendApiResponse(['errors' => $e->errors()], 'Code invalide.', false, 422);
+        }
+    }
+
+    #[OA\Post(path: '/api/auth/2fa/verify', summary: 'Finaliser la connexion avec le code 2FA (owner/admin)', tags: ['Authentication'],
+        requestBody: new OA\RequestBody(required: true, content: new OA\JsonContent(
+            required: ['user_id', 'code'],
+            properties: [
+                new OA\Property(property: 'user_id', type: 'integer'),
+                new OA\Property(property: 'code', type: 'string', example: '123456'),
+            ]
+        )),
+        responses: [
+            new OA\Response(response: 200, description: 'Connexion réussie'),
+            new OA\Response(response: 422, description: 'Code invalide ou expiré'),
+        ]
+    )]
+    public function verifyTwoFactor(Request $request): JsonResponse
+    {
+        $request->validate(['user_id' => 'required|integer', 'code' => 'required|string']);
+
+        try {
+            $result = $this->authService->verifyTwoFactor((int) $request->user_id, $request->code);
+            return $this->sendApiResponse($result, 'Connexion réussie.');
+        } catch (ValidationException $e) {
+            return $this->sendApiResponse(['errors' => $e->errors()], 'Code invalide.', false, 422);
+        }
+    }
+
+    #[OA\Patch(path: '/api/user/settings/2fa', summary: 'Activer/désactiver la double authentification (owner/admin)', security: [['sanctum' => []]], tags: ['Authentication'],
+        requestBody: new OA\RequestBody(required: true, content: new OA\JsonContent(
+            required: ['enabled'],
+            properties: [new OA\Property(property: 'enabled', type: 'boolean')]
+        )),
+        responses: [
+            new OA\Response(response: 200, description: 'Préférence mise à jour'),
+            new OA\Response(response: 403, description: 'Réservé aux propriétaires/admins'),
+        ]
+    )]
+    public function updateTwoFactorSetting(Request $request): JsonResponse
+    {
+        $request->validate(['enabled' => 'required|boolean']);
+        $user = $request->user();
+
+        if ($user->isSeeker()) {
+            return $this->sendApiResponse(null, 'La double authentification est réservée aux propriétaires et administrateurs.', false, 403);
+        }
+
+        $user->update(['two_factor_enabled' => $request->boolean('enabled')]);
+
+        return $this->sendApiResponse(
+            ['two_factor_enabled' => $user->two_factor_enabled],
+            'Préférence de double authentification mise à jour.'
+        );
     }
 }

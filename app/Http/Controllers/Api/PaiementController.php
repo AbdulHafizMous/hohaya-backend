@@ -2,6 +2,8 @@
 
 namespace App\Http\Controllers\Api;
 
+use App\Enums\PaiementStatus;
+use App\Enums\PaiementType;
 use App\Http\Controllers\Controller;
 use App\Models\Paiement;
 use App\Services\AbonnementService;
@@ -80,5 +82,38 @@ class PaiementController extends Controller
             )),
             'Paiements récupérés.'
         );
+    }
+
+    #[OA\Get(
+        path: '/api/owner/revenus-contacts',
+        summary: 'Mes gains sur les déblocages de contact de mes annonces (propriétaire)',
+        security: [['sanctum' => []]],
+        tags: ['Paiements'],
+        parameters: [
+            new OA\Parameter(name: 'per_page', in: 'query', required: false,
+                schema: new OA\Schema(type: 'integer', default: 15)),
+        ],
+        responses: [new OA\Response(response: 200, description: 'Gains et historique récupérés')]
+    )]
+    public function revenusContacts(Request $request): JsonResponse
+    {
+        $user = $request->user();
+
+        $query = Paiement::with('property')
+            ->where('type', PaiementType::DEBLOCAGE->value)
+            ->where('status', PaiementStatus::SUCCES->value)
+            ->whereHas('property', fn($q) => $q->where('id_user', $user->id));
+
+        $totalPart = (clone $query)->sum('part_proprietaire');
+
+        $paiements = $query->latest('paye_le')->paginate((int) $request->input('per_page', 15));
+
+        return $this->sendApiResponse([
+            'total_gagne' => (float) $totalPart,
+            'paiements'   => $paiements->through(fn($p) => array_merge(
+                $this->abonnementService->formatPaiement($p),
+                ['property' => $p->property ? ['id' => $p->property->id, 'title' => $p->property->title] : null]
+            )),
+        ], 'Gains récupérés.');
     }
 }

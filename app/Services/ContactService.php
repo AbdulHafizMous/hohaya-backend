@@ -168,12 +168,19 @@ class ContactService
         }
 
         return DB::transaction(function () use ($user, $paiement, $transactionId, $transactionData) {
+            // Répartition du paiement entre Hohaya et le propriétaire, taux configurable en admin (Setting).
+            $pourcentageHohaya = (float) Setting::get('deblocage_part_hohaya_pourcentage', '50');
+            $partHohaya        = round($paiement->montant * $pourcentageHohaya / 100, 2);
+            $partProprietaire  = round($paiement->montant - $partHohaya, 2);
+
             $paiement->update([
                 'status'                 => PaiementStatus::SUCCES->value,
                 'fedapay_transaction_id' => $transactionId,
                 'fedapay_response'       => $transactionData,
                 'telephone_paiement'     => $this->fedapay->getPhone($transactionData),
                 'paye_le'                => now(),
+                'part_hohaya'            => $partHohaya,
+                'part_proprietaire'      => $partProprietaire,
             ]);
 
             AccessContact::create([

@@ -12,11 +12,15 @@ class RegisterRequest extends FormRequest
 
     public function rules(): array
     {
+        $isSeeker = $this->input('role') === 'seeker';
+
         return [
             'name'     => ['required', 'string', 'max:100'],
-            'email'    => ['required_without:phone', 'nullable', 'email', 'unique:users,email', 'max:150'],
+            // Les chercheurs se connectent uniquement par code email : email obligatoire pour eux.
+            'email'    => [$isSeeker ? 'required' : 'required_without:phone', 'nullable', 'email', 'unique:users,email', 'max:150'],
             'phone'    => ['required_without:email', 'nullable', 'string', 'unique:users,phone', 'max:20'],
-            'password' => ['required', 'string', 'min:6', 'confirmed'],
+            // Pas de mot de passe à saisir pour un chercheur (connexion par code uniquement).
+            'password' => [$isSeeker ? 'sometimes' : 'required', 'string', 'min:6', 'confirmed'],
             'role'     => ['required', 'in:owner,seeker'],
         ];
     }
@@ -27,6 +31,7 @@ class RegisterRequest extends FormRequest
             'name.required'              => 'Le nom est obligatoire.',
             'name.max'                   => 'Le nom ne peut pas dépasser 100 caractères.',
             'email.required_without'     => 'Un email est requis si vous ne fournissez pas de téléphone.',
+            'email.required'             => 'Un email est requis pour recevoir votre code de connexion.',
             'email.email'                => 'L\'adresse email n\'est pas valide.',
             'email.unique'               => 'Cette adresse email est déjà utilisée par un autre compte.',
             'phone.required_without'     => 'Un téléphone est requis si vous ne fournissez pas d\'email.',

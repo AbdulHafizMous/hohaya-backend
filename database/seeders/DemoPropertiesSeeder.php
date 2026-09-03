@@ -51,7 +51,8 @@ class DemoPropertiesSeeder extends Seeder
         ['ville' => 'Bohicon', 'communes' => ['Agongointo', 'Avogbanna']],
     ];
 
-    private array $types = ['maison', 'appartement', 'studio', 'chambre', 'villa', 'duplex'];
+    // v1 recentrée "logement étudiant" : uniquement "chambre à louer" (cf. PropertyForm.tsx frontend).
+    private array $types = ['chambre'];
 
     public function run(): void
     {

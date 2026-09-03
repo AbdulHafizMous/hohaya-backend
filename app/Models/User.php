@@ -25,6 +25,7 @@ class User extends Authenticatable implements MustVerifyEmail
         'subscription_start' => 'datetime',
         'subscription_end'   => 'datetime',
         'is_verified'        => 'boolean',
+        'two_factor_enabled' => 'boolean',
         'deleted_by'         => 'integer',
         'created_by'         => 'integer',
         'updated_by'         => 'integer',
@@ -39,7 +40,7 @@ class User extends Authenticatable implements MustVerifyEmail
         'name', 'email', 'phone', 'password',
         'avatar', 'preferences', 'adress',
         'is_suscribed', 'subscription_start', 'subscription_end',
-        'is_verified', 'email_verified_at', 'remember_token',
+        'is_verified', 'email_verified_at', 'two_factor_enabled', 'remember_token',
         'deleted_by', 'created_by', 'updated_by',
     ];
 

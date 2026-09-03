@@ -55,7 +55,7 @@ class PropertyController extends Controller
     )]
     public function index(Request $request): JsonResponse
     {
-        $filters    = $request->only(['ville', 'quartier', 'commune', 'type_logement', 'prix_min', 'prix_max', 'nb_pieces', 'meuble']);
+        $filters    = $request->only(['pays', 'ville', 'quartier', 'commune', 'type_logement', 'prix_min', 'prix_max', 'nb_pieces', 'meuble']);
         $perPage    = (int) $request->input('per_page', 15);
         $properties = $this->propertyService->list($filters, $perPage);
 

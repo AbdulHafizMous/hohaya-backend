@@ -20,14 +20,21 @@ Route::middleware('api')->group(function () {
 
     // ── Auth ─────────────────────────────────────────────────────────────────
     Route::prefix('auth')->group(function () {
-        Route::post('/register',        [AuthController::class, 'register']);
-        Route::post('/login',           [AuthController::class, 'login'])->name('login');
+        Route::post('/register',        [AuthController::class, 'register'])->middleware('throttle:10,1');
+        Route::post('/login',           [AuthController::class, 'login'])->name('login')->middleware('throttle:10,1');
         Route::post('/refresh',         [AuthController::class, 'refresh']);
         Route::post('/forgot-password', [AuthController::class, 'forgotPassword']);
         Route::post('/reset-password',  [AuthController::class, 'resetPassword'])->name('password.reset');
         Route::get('/verify-email/{id}/{hash}', [AuthController::class, 'verifyEmail'])
             ->name('verification.verify')
             ->middleware('signed');
+
+        // Connexion par code (chercheurs) + 2FA (owner/admin) — throttle anti-bruteforce/spam mail
+        Route::middleware('throttle:6,1')->group(function () {
+            Route::post('/login-code/request', [AuthController::class, 'requestLoginCode']);
+            Route::post('/login-code/verify',  [AuthController::class, 'verifyLoginCode']);
+            Route::post('/2fa/verify',          [AuthController::class, 'verifyTwoFactor']);
+        });
 
         Route::middleware('auth:sanctum')->group(function () {
             Route::get('/me',                   [AuthController::class, 'me']);
@@ -46,6 +53,7 @@ Route::middleware('api')->group(function () {
         Route::delete('/avatar',     [UserController::class, 'deleteAvatar']);
         Route::delete('/account',    [UserController::class, 'deleteAccount']);
         Route::post('/restore/{id}', [UserController::class, 'restoreAccount']);
+        Route::patch('/settings/2fa', [AuthController::class, 'updateTwoFactorSetting']);
     });
 
     // ── Annonces publiques ────────────────────────────────────────────────────
@@ -119,6 +127,7 @@ Route::middleware('api')->group(function () {
         Route::get('/visites',                  [ChercheurController::class, 'visitesRecues']);
         Route::patch('/visites/{id}/repondre',  [ChercheurController::class, 'repondreVisite']);
         Route::get('/locataires',               [ReservationController::class, 'locatairesProprietaire']);
+        Route::get('/revenus-contacts',         [PaiementController::class, 'revenusContacts']);
     });
 
     // ── Support tickets ───────────────────────────────────────────────────────
@@ -152,6 +161,7 @@ Route::middleware('api')->group(function () {
 
         // Modération annonces
         Route::get('/properties/pending', [AdminController::class, 'annoncesEnAttente']);
+        Route::get('/properties', [AdminController::class, 'toutesLesAnnonces']);
 
         // Locataires
         Route::get('/locataires', [ReservationController::class, 'locatairesAdmin']);
@@ -175,5 +185,6 @@ Route::middleware('api')->group(function () {
         // Paramètres généraux
         Route::get('/settings',                    [AdminController::class, 'settings']);
         Route::patch('/settings/deblocage-prix',    [AdminController::class, 'updateDeblocagePrix']);
+        Route::patch('/settings/deblocage-part-hohaya', [AdminController::class, 'updateDeblocagePartHohaya']);
     });
 });

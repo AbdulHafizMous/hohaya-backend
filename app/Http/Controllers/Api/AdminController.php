@@ -208,6 +208,30 @@ class AdminController extends Controller
     }
 
     #[OA\Get(
+        path: '/api/admin/properties',
+        summary: 'Toutes les annonces avec leur propriétaire',
+        security: [['sanctum' => []]],
+        tags: ['Admin'],
+        parameters: [
+            new OA\Parameter(name: 'per_page', in: 'query', required: false,
+                schema: new OA\Schema(type: 'integer', default: 20)),
+        ],
+        responses: [new OA\Response(response: 200, description: 'Annonces récupérées')]
+    )]
+    public function toutesLesAnnonces(Request $request): JsonResponse
+    {
+        if ($err = $this->checkAdmin($request)) return $err;
+
+        $perPage    = (int) $request->input('per_page', 20);
+        $properties = $this->adminService->toutesLesAnnonces($perPage);
+
+        return $this->sendApiResponse(
+            $properties->through(fn($p) => $this->propertyService->formatProperty($p)),
+            'Annonces récupérées.'
+        );
+    }
+
+    #[OA\Get(
         path: '/api/admin/export/paiements',
         summary: 'Exporter les paiements en CSV',
         security: [['sanctum' => []]],
@@ -344,6 +368,10 @@ class AdminController extends Controller
                 'deblocage_contact_prix',
                 (string) config('fedapay.deblocage_prix', 500)
             ),
+            'deblocage_part_hohaya_pourcentage' => (float) \App\Models\Setting::get(
+                'deblocage_part_hohaya_pourcentage',
+                '50'
+            ),
         ], 'Paramètres récupérés.');
     }
 
@@ -373,6 +401,35 @@ class AdminController extends Controller
         return $this->sendApiResponse(
             ['deblocage_contact_prix' => (float) $request->montant],
             'Prix de déblocage mis à jour.'
+        );
+    }
+
+    #[OA\Patch(
+        path: '/api/admin/settings/deblocage-part-hohaya',
+        summary: 'Modifier le pourcentage du paiement de déblocage revenant à Hohaya (le reste va au propriétaire)',
+        security: [['sanctum' => []]],
+        tags: ['Admin'],
+        requestBody: new OA\RequestBody(required: true, content: new OA\JsonContent(
+            required: ['pourcentage'],
+            properties: [new OA\Property(property: 'pourcentage', type: 'number', example: 50)]
+        )),
+        responses: [
+            new OA\Response(response: 200, description: 'Pourcentage mis à jour'),
+            new OA\Response(response: 403, description: 'Non autorisé'),
+            new OA\Response(response: 422, description: 'Pourcentage invalide'),
+        ]
+    )]
+    public function updateDeblocagePartHohaya(Request $request): JsonResponse
+    {
+        if ($err = $this->checkAdmin($request)) return $err;
+
+        $request->validate(['pourcentage' => 'required|numeric|min:0|max:100']);
+
+        \App\Models\Setting::set('deblocage_part_hohaya_pourcentage', (string) $request->pourcentage, $request->user()->id);
+
+        return $this->sendApiResponse(
+            ['deblocage_part_hohaya_pourcentage' => (float) $request->pourcentage],
+            'Répartition mise à jour.'
         );
     }
 }

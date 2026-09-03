@@ -16,6 +16,8 @@ class Paiement extends Model
         'id_abonnement'  => 'integer',
         'id_property'    => 'integer',
         'montant'        => 'float',
+        'part_hohaya'      => 'float',
+        'part_proprietaire' => 'float',
         'fedapay_response' => 'array',
         'paye_le'        => 'datetime',
         'deleted_by'     => 'integer',
@@ -24,7 +26,7 @@ class Paiement extends Model
     ];
 
     protected $fillable = [
-        'id_user', 'type', 'status', 'montant', 'devise',
+        'id_user', 'type', 'status', 'montant', 'part_hohaya', 'part_proprietaire', 'devise',
         'fedapay_transaction_id', 'fedapay_reference', 'fedapay_response',
         'id_abonnement', 'id_property',
         'telephone_paiement', 'operateur',

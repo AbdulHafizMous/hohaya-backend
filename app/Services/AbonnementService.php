@@ -263,6 +263,8 @@ class AbonnementService
             'type'                   => $paiement->type,
             'status'                 => $paiement->status,
             'montant'                => $paiement->montant,
+            'part_hohaya'            => $paiement->part_hohaya,
+            'part_proprietaire'      => $paiement->part_proprietaire,
             'devise'                 => $paiement->devise,
             'fedapay_transaction_id' => $paiement->fedapay_transaction_id,
             'telephone_paiement'     => $paiement->telephone_paiement,

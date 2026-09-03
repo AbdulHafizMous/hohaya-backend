@@ -35,7 +35,9 @@ class VerifyEmailNotification extends Notification
 
     protected function verificationUrl(object $notifiable): string
     {
-        return URL::temporarySignedRoute(
+        // URL signée générée côté API (pour la validation), puis réécrite pour pointer
+        // vers la page Next.js qui l'appelle en JS — l'utilisateur ne doit jamais voir l'API brute.
+        $apiUrl = URL::temporarySignedRoute(
             'verification.verify',
             Carbon::now()->addMinutes(Config::get('auth.verification.expire', 60)),
             [
@@ -43,5 +45,11 @@ class VerifyEmailNotification extends Notification
                 'hash' => sha1($notifiable->getEmailForVerification()),
             ]
         );
+
+        $query = parse_url($apiUrl, PHP_URL_QUERY);
+
+        return rtrim(env('FRONTEND_URL'), '/')
+            . '/verify-email/' . $notifiable->getKey() . '/' . sha1($notifiable->getEmailForVerification())
+            . ($query ? '?' . $query : '');
     }
 }

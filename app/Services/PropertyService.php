@@ -19,6 +19,9 @@ class PropertyService
             ->where('is_verified', true)
             ->where('status', PropertyStatus::DISPONIBLE->value);
 
+        if (!empty($filters['pays'])) {
+            $query->where('pays', 'like', '%' . $filters['pays'] . '%');
+        }
         if (!empty($filters['ville'])) {
             $query->where('ville', 'like', '%' . $filters['ville'] . '%');
         }
@@ -100,7 +103,8 @@ class PropertyService
             'parking'             => $data['parking'] ?? false,
             'meuble'              => $data['meuble'] ?? false,
             'status'              => PropertyStatus::DISPONIBLE->value,
-            'is_verified'         => false,
+            // Publication automatique : visible immédiatement en recherche/accueil, pas de modération manuelle requise.
+            'is_verified'         => true,
             'created_by'          => $user->id,
         ]);
 
@@ -112,13 +116,6 @@ class PropertyService
         $this->checkOwnership($user, $property);
 
         $data['updated_by'] = $user->id;
-
-        $triggerFields = ['title', 'description', 'quartier', 'ville', 'prix_loyer', 'type_logement'];
-        $needsReview   = collect($triggerFields)->some(fn($f) => isset($data[$f]));
-
-        if ($needsReview && $property->is_verified) {
-            $data['is_verified'] = false;
-        }
 
         $property->update($data);
 

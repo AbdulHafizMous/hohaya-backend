@@ -51,6 +51,9 @@ class AdminService
                     ->whereMonth('paye_le', $now->copy()->subMonth()->month)
                     ->whereYear('paye_le', $now->copy()->subMonth()->year)
                     ->sum('montant'),
+                // Répartition des paiements de déblocage de contact entre Hohaya et les propriétaires.
+                'part_hohaya_total'       => (float) Paiement::where('status', PaiementStatus::SUCCES->value)->sum('part_hohaya'),
+                'part_proprietaires_total' => (float) Paiement::where('status', PaiementStatus::SUCCES->value)->sum('part_proprietaire'),
             ],
             'support' => [
                 'ouverts'  => SupportTicket::where('status', 'ouvert')->count(),
@@ -142,6 +145,14 @@ class AdminService
     {
         return Property::with(['proprietaire', 'medias', 'mediaPrincipal'])
             ->where('is_verified', false)
+            ->whereNull('deleted_at')
+            ->latest()
+            ->paginate($perPage);
+    }
+
+    public function toutesLesAnnonces(int $perPage = 20): LengthAwarePaginator
+    {
+        return Property::with(['proprietaire', 'medias', 'mediaPrincipal'])
             ->whereNull('deleted_at')
             ->latest()
             ->paginate($perPage);
