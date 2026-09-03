@@ -90,7 +90,9 @@ class PropertyService
             'pays'                => $data['pays'] ?? 'Bénin',
             'prix_loyer'          => $data['prix_loyer'],
             'devise'              => $data['devise'] ?? 'XOF',
-            'type_logement'       => $data['type_logement'],
+            // v1 recentrée "logement étudiant" : uniquement "chambre à louer", quel que soit ce
+            // qu'envoie le client (le frontend cache déjà les autres options).
+            'type_logement'       => \App\Enums\PropertyType::CHAMBRE->value,
             'condition'           => $data['condition'],
             'nb_avance'           => $data['nb_avance'] ?? 3,
             'caution_electricite' => $data['caution_electricite'] ?? null,
@@ -116,6 +118,8 @@ class PropertyService
         $this->checkOwnership($user, $property);
 
         $data['updated_by'] = $user->id;
+        // v1 recentrée "logement étudiant" : le type reste "chambre" même en édition.
+        unset($data['type_logement']);
 
         $property->update($data);
 
