@@ -2,7 +2,7 @@
 {{-- Header --}}
 <x-slot:header>
 <x-mail::header :url="rtrim(env('FRONTEND_URL'), '/')">
-<img src="{{ rtrim(env('FRONTEND_URL'), '/') }}/logo.png" class="logo" alt="{{ config('app.name') }}" style="max-height: 40px;">
+{{ config('app.name') }}
 </x-mail::header>
 </x-slot:header>
 
