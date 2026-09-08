@@ -43,6 +43,53 @@ class AbonnementService
     }
 
     /**
+     * Affecte automatiquement l'abonnement Gratuit à un propriétaire qui vient de s'inscrire,
+     * s'il n'a pas déjà d'abonnement actif et que le plan gratuit existe et est actif.
+     */
+    public function affecterAbonnementGratuit(User $user): ?Abonnement
+    {
+        if ($this->getAbonnementActif($user)) {
+            return null;
+        }
+
+        $tarif = TarifAbonnement::where('type', AbonnementType::GRATUIT->value)
+            ->where('is_actif', true)
+            ->first();
+
+        if (!$tarif) {
+            return null;
+        }
+
+        return DB::transaction(function () use ($user, $tarif) {
+            $paiement = Paiement::create([
+                'id_user'           => $user->id,
+                'type'              => PaiementType::ABONNEMENT->value,
+                'status'            => PaiementStatus::SUCCES->value,
+                'montant'           => 0,
+                'devise'            => $tarif->devise,
+                'paye_le'           => now(),
+                'created_by'        => $user->id,
+            ]);
+
+            $abonnement = Abonnement::create([
+                'id_user'     => $user->id,
+                'type'        => AbonnementType::GRATUIT->value,
+                'status'      => AbonnementStatus::ACTIF->value,
+                'montant'     => 0,
+                'devise'      => $tarif->devise,
+                'date_debut'  => now(),
+                'date_fin'    => now()->addDays(AbonnementType::GRATUIT->dureeEnJours()),
+                'id_paiement' => $paiement->id,
+                'created_by'  => $user->id,
+            ]);
+
+            $paiement->update(['id_abonnement' => $abonnement->id]);
+
+            return $abonnement;
+        });
+    }
+
+    /**
      * Historique des abonnements
      */
     public function historique(User $user, int $perPage = 15)
@@ -73,9 +120,10 @@ class AbonnementService
             ]);
         }
 
-        // Vérifier s'il y a déjà un abonnement actif
+        // Vérifier s'il y a déjà un abonnement actif — le plan Gratuit n'empêche pas de passer
+        // à un plan payant (c'est même le but recherché quand l'abonnement devient obligatoire).
         $actif = $this->getAbonnementActif($user);
-        if ($actif) {
+        if ($actif && $actif->type !== AbonnementType::GRATUIT->value) {
             throw ValidationException::withMessages([
                 'abonnement' => [
                     'Vous avez déjà un abonnement actif jusqu\'au ' . $actif->date_fin->format('d/m/Y') . '.'
@@ -84,29 +132,44 @@ class AbonnementService
         }
 
         return DB::transaction(function () use ($user, $type, $tarif) {
-            // Créer le paiement en attente
+            // Créer le paiement (immédiatement en succès si le tarif est gratuit, sans passer par FedaPay)
+            $estGratuit = $tarif->montant <= 0;
+
             $paiement = Paiement::create([
                 'id_user'   => $user->id,
                 'type'      => PaiementType::ABONNEMENT->value,
-                'status'    => PaiementStatus::EN_ATTENTE->value,
+                'status'    => $estGratuit ? PaiementStatus::SUCCES->value : PaiementStatus::EN_ATTENTE->value,
                 'montant'   => $tarif->montant,
                 'devise'    => $tarif->devise,
+                'paye_le'   => $estGratuit ? now() : null,
                 'created_by' => $user->id,
             ]);
 
-            // Créer l'abonnement en attente
             $abonnement = Abonnement::create([
                 'id_user'     => $user->id,
                 'type'        => $type,
-                'status'      => AbonnementStatus::EN_ATTENTE->value,
+                'status'      => $estGratuit ? AbonnementStatus::ACTIF->value : AbonnementStatus::EN_ATTENTE->value,
                 'montant'     => $tarif->montant,
                 'devise'      => $tarif->devise,
+                'date_debut'  => $estGratuit ? now() : null,
+                'date_fin'    => $estGratuit ? now()->addDays(AbonnementType::from($type)->dureeEnJours()) : null,
                 'id_paiement' => $paiement->id,
                 'created_by'  => $user->id,
             ]);
 
             // Lier le paiement à l'abonnement
             $paiement->update(['id_abonnement' => $abonnement->id]);
+
+            if ($estGratuit) {
+                return [
+                    'abonnement'   => $this->formatAbonnement($abonnement),
+                    'paiement_id'  => $paiement->id,
+                    'montant'      => 0,
+                    'devise'       => $tarif->devise,
+                    'gratuit'      => true,
+                    'instructions' => 'Abonnement gratuit activé immédiatement.',
+                ];
+            }
 
             return [
                 'abonnement'    => $this->formatAbonnement($abonnement),
@@ -189,6 +252,13 @@ class AbonnementService
                 'date_fin'   => $dateFin,
                 'updated_by' => $user->id,
             ]);
+
+            // Clôturer un éventuel plan Gratuit encore actif, remplacé par ce nouvel abonnement payant.
+            Abonnement::where('id_user', $user->id)
+                ->where('id', '!=', $paiement->abonnement->id)
+                ->where('type', AbonnementType::GRATUIT->value)
+                ->where('status', AbonnementStatus::ACTIF->value)
+                ->update(['status' => AbonnementStatus::EXPIRE->value]);
 
             // Mettre à jour le user
             $user->update([

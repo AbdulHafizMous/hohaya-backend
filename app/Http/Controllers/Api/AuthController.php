@@ -189,30 +189,47 @@ class AuthController extends Controller
         );
     }
 
-    #[OA\Get(path: '/api/auth/verify-email/{id}/{hash}', summary: 'Vérifier email', tags: ['Authentication'],
-        parameters: [
-            new OA\Parameter(name: 'id', in: 'path', required: true, schema: new OA\Schema(type: 'integer')),
-            new OA\Parameter(name: 'hash', in: 'path', required: true, schema: new OA\Schema(type: 'string')),
-        ],
-        responses: [new OA\Response(response: 200, description: 'Email vérifié')]
+    #[OA\Post(path: '/api/auth/verify-email', summary: 'Vérifier email via un token opaque envoyé par email', tags: ['Authentication'],
+        requestBody: new OA\RequestBody(required: true, content: new OA\JsonContent(
+            required: ['token'],
+            properties: [new OA\Property(property: 'token', type: 'string')]
+        )),
+        responses: [
+            new OA\Response(response: 200, description: 'Email vérifié'),
+            new OA\Response(response: 403, description: 'Token invalide ou expiré'),
+        ]
     )]
-    public function verifyEmail(Request $request, int $id, string $hash): JsonResponse
+    public function verifyEmail(Request $request): JsonResponse
     {
-        $user = \App\Models\User::findOrFail($id);
+        $request->validate(['token' => 'required|string']);
 
-        if (!hash_equals(sha1($user->email), $hash)) {
+        $hashed = hash('sha256', $request->token);
+
+        $record = \App\Models\EmailVerificationToken::where('token', $hashed)
+            ->whereNull('consumed_at')
+            ->first();
+
+        if (!$record) {
             return $this->sendApiResponse(null, 'Lien de vérification invalide.', false, 403);
         }
 
-        if (!$request->hasValidSignature()) {
+        if ($record->expires_at->isPast()) {
             return $this->sendApiResponse(null, 'Lien de vérification expiré.', false, 403);
         }
+
+        $user = $record->user;
+
+        if (!$user) {
+            return $this->sendApiResponse(null, 'Compte introuvable.', false, 403);
+        }
+
+        $record->update(['consumed_at' => now()]);
 
         if (!$user->hasVerifiedEmail()) {
             $user->markEmailAsVerified();
         }
 
-        // Le lien signé prouve déjà l'identité : on connecte directement l'utilisateur,
+        // Le token prouve déjà l'identité : on connecte directement l'utilisateur,
         // pas besoin de lui redemander son mot de passe juste après.
         return $this->sendApiResponse(
             $this->authService->issueTokensFor($user),

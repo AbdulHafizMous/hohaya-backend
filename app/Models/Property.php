@@ -32,8 +32,8 @@ class Property extends Model
     ];
 
     protected $fillable = [
-        'id_user', 'title', 'description', 'indications_acces',
-        'quartier', 'commune', 'ville', 'pays',
+        'id_user', 'title', 'description', 'indications_acces', 'lien_maps',
+        'quartier', 'ville', 'pays',
         'prix_loyer', 'devise', 'type_logement', 'condition',
         'nb_avance', 'caution_electricite', 'caution_eau',
         'nb_pieces', 'status', 'date_debut_louer', 'is_verified',

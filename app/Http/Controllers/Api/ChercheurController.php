@@ -171,6 +171,46 @@ class ChercheurController extends Controller
         }
     }
 
+    #[OA\Patch(
+        path: '/api/chercheur/visites/{id}/repondre',
+        summary: 'Confirmer ou refuser une visite proposée par le propriétaire',
+        security: [['sanctum' => []]],
+        tags: ['Chercheur'],
+        parameters: [
+            new OA\Parameter(name: 'id', in: 'path', required: true,
+                schema: new OA\Schema(type: 'integer')),
+        ],
+        requestBody: new OA\RequestBody(
+            required: true,
+            content: new OA\JsonContent(
+                required: ['status'],
+                properties: [
+                    new OA\Property(property: 'status', type: 'string',
+                        enum: ['confirmée', 'refusée'], example: 'confirmée'),
+                ]
+            )
+        ),
+        responses: [
+            new OA\Response(response: 200, description: 'Réponse envoyée'),
+            new OA\Response(response: 422, description: 'Visite introuvable'),
+        ]
+    )]
+    public function repondreVisiteChercheur(Request $request, int $id): JsonResponse
+    {
+        $request->validate(['status' => 'required|in:confirmée,refusée']);
+
+        try {
+            $visite = $this->chercheurService->repondreVisiteChercheur($request->user(), $id, $request->status);
+            return $this->sendApiResponse(
+                $this->chercheurService->formatVisite($visite),
+                'Réponse envoyée.'
+            );
+        } catch (ValidationException $e) {
+            $errors = $e->errors();
+            return $this->sendApiResponse(['errors' => $errors], current($errors)[0], false, 422);
+        }
+    }
+
     // ── Côté propriétaire ─────────────────────────────────────────────
 
     #[OA\Get(
@@ -250,6 +290,54 @@ class ChercheurController extends Controller
             $errors = $e->errors();
             $status = isset($errors['visite']) && str_contains(current($errors['visite']), 'autorisé') ? 403 : 422;
             return $this->sendApiResponse(['errors' => $errors], current($errors)[0], false, $status);
+        }
+    }
+
+    #[OA\Post(
+        path: '/api/owner/visites',
+        summary: 'Proposer une visite à un chercheur ayant débloqué mon contact (owner)',
+        security: [['sanctum' => []]],
+        tags: ['Chercheur'],
+        requestBody: new OA\RequestBody(
+            required: true,
+            content: new OA\JsonContent(
+                required: ['id_property', 'id_chercheur', 'date_souhaitee'],
+                properties: [
+                    new OA\Property(property: 'id_property', type: 'integer'),
+                    new OA\Property(property: 'id_chercheur', type: 'integer'),
+                    new OA\Property(property: 'date_souhaitee', type: 'string', format: 'date-time'),
+                    new OA\Property(property: 'message', type: 'string', nullable: true),
+                ]
+            )
+        ),
+        responses: [
+            new OA\Response(response: 201, description: 'Visite proposée'),
+            new OA\Response(response: 422, description: 'Données invalides'),
+        ]
+    )]
+    public function proposerVisite(Request $request): JsonResponse
+    {
+        $request->validate([
+            'id_property'    => 'required|integer|exists:properties,id',
+            'id_chercheur'   => 'required|integer|exists:users,id',
+            'date_souhaitee' => 'required|date|after:now',
+            'message'        => 'sometimes|nullable|string|max:500',
+        ]);
+
+        try {
+            $visite = $this->chercheurService->proposerVisite(
+                $request->user(),
+                $request->only(['id_property', 'id_chercheur', 'date_souhaitee', 'message'])
+            );
+            return $this->sendApiResponse(
+                $this->chercheurService->formatVisite($visite),
+                'Visite proposée. Le chercheur va être notifié.',
+                true,
+                201
+            );
+        } catch (ValidationException $e) {
+            $errors = $e->errors();
+            return $this->sendApiResponse(['errors' => $errors], current($errors)[0], false, 422);
         }
     }
 }

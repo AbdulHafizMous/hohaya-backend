@@ -5,13 +5,15 @@ namespace App\Services;
 use App\Models\User;
 use App\Notifications\VerifyEmailNotification;
 use Illuminate\Support\Facades\Hash;
-use Illuminate\Support\Str;
 use Illuminate\Validation\ValidationException;
 use Laravel\Sanctum\PersonalAccessToken;
 
 class AuthService
 {
-    public function __construct(private LoginCodeService $loginCodeService) {}
+    public function __construct(
+        private LoginCodeService $loginCodeService,
+        private AbonnementService $abonnementService,
+    ) {}
 
     public function register(array $data): array
     {
@@ -36,27 +38,19 @@ class AuthService
         $role = $data['role'];
         unset($data['role'], $data['password_confirmation']);
 
-        $isSeeker = $role === 'seeker';
-
-        // Les chercheurs n'ont pas de mot de passe à définir : compte créé avec un mot de passe
-        // aléatoire (jamais communiqué), connexion uniquement par code email.
-        $data['password'] = Hash::make($isSeeker ? Str::random(40) : $data['password']);
+        // Tous les rôles définissent un mot de passe à l'inscription (chercheur inclus).
+        // Le chercheur pourra toujours, en plus, se connecter par code email (voir requestLoginCode).
+        $data['password'] = Hash::make($data['password']);
 
         $user = User::create($data);
         $user->assignRole($role);
 
-        if ($isSeeker) {
-            if ($user->email) {
-                $this->loginCodeService->generateAndSend($user, 'login_seeker');
-            }
-
-            return [
-                'requires_login_code' => true,
-                'email'               => $user->email,
-            ];
+        // Le propriétaire démarre automatiquement sur le plan Gratuit (jusqu'à ce qu'il change
+        // de plan ou que l'admin réactive l'obligation d'abonnement — voir CheckAbonnementActif).
+        if ($role === 'owner') {
+            $this->abonnementService->affecterAbonnementGratuit($user);
         }
 
-        // Propriétaire : mot de passe défini, mais compte utilisable seulement après vérification email.
         $user->notify(new VerifyEmailNotification());
 
         return [

@@ -28,9 +28,6 @@ class PropertyService
         if (!empty($filters['quartier'])) {
             $query->where('quartier', 'like', '%' . $filters['quartier'] . '%');
         }
-        if (!empty($filters['commune'])) {
-            $query->where('commune', 'like', '%' . $filters['commune'] . '%');
-        }
         if (!empty($filters['type_logement'])) {
             $query->where('type_logement', $filters['type_logement']);
         }
@@ -84,8 +81,8 @@ class PropertyService
             'title'               => $data['title'],
             'description'         => $data['description'],
             'indications_acces'   => $data['indications_acces'] ?? null,
+            'lien_maps'           => $data['lien_maps'] ?? null,
             'quartier'            => $data['quartier'],
-            'commune'             => $data['commune'] ?? null,
             'ville'               => $data['ville'],
             'pays'                => $data['pays'] ?? 'Bénin',
             'prix_loyer'          => $data['prix_loyer'],
@@ -189,8 +186,8 @@ class PropertyService
             'title'               => $property->title,
             'description'         => $property->description,
             'indications_acces'   => $property->indications_acces,
+            'lien_maps'           => $property->lien_maps,
             'quartier'            => $property->quartier,
-            'commune'             => $property->commune,
             'ville'               => $property->ville,
             'pays'                => $property->pays,
             'prix_loyer'          => $property->prix_loyer,

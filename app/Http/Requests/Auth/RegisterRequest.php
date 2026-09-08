@@ -16,11 +16,11 @@ class RegisterRequest extends FormRequest
 
         return [
             'name'     => ['required', 'string', 'max:100'],
-            // Les chercheurs se connectent uniquement par code email : email obligatoire pour eux.
+            // Le chercheur garde un email requis : utile pour la vérification et l'option code de connexion.
             'email'    => [$isSeeker ? 'required' : 'required_without:phone', 'nullable', 'email', 'unique:users,email', 'max:150'],
             'phone'    => ['required_without:email', 'nullable', 'string', 'unique:users,phone', 'max:20'],
-            // Pas de mot de passe à saisir pour un chercheur (connexion par code uniquement).
-            'password' => [$isSeeker ? 'sometimes' : 'required', 'string', 'min:6', 'confirmed'],
+            // Mot de passe obligatoire pour tous les rôles (le chercheur garde en plus l'option code email).
+            'password' => ['required', 'string', 'min:6', 'confirmed'],
             'role'     => ['required', 'in:owner,seeker'],
         ];
     }

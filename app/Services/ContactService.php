@@ -10,6 +10,7 @@ use App\Models\Property;
 use App\Models\Setting;
 use App\Models\User;
 use App\Notifications\ContactDebloqueNotification;
+use App\Notifications\ContactDebloqueParChercheurNotification;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\Log;
@@ -98,6 +99,39 @@ class ContactService
         }
 
         $prix = (float) Setting::get('deblocage_contact_prix', (string) config('fedapay.deblocage_prix', 500));
+
+        // Essais gratuits : les N premiers déblocages du chercheur (toutes annonces confondues)
+        // sont gratuits, N étant configurable par l'admin. Le prix à 0 débloque aussi directement.
+        $essaisGratuits = (int) Setting::get('deblocage_essais_gratuits', '3');
+        $deblocagesExistants = AccessContact::where('id_user', $user->id)->count();
+        $estGratuit = $prix <= 0 || $deblocagesExistants < $essaisGratuits;
+
+        if ($estGratuit) {
+            return DB::transaction(function () use ($user, $property, $prix) {
+                $paiement = Paiement::create([
+                    'id_user'           => $user->id,
+                    'type'              => PaiementType::DEBLOCAGE->value,
+                    'status'            => PaiementStatus::SUCCES->value,
+                    'montant'           => 0,
+                    'part_hohaya'       => 0,
+                    'part_proprietaire' => 0,
+                    'devise'            => 'XOF',
+                    'id_property'       => $property->id,
+                    'paye_le'           => now(),
+                    'created_by'        => $user->id,
+                ]);
+
+                AccessContact::create([
+                    'id_user'     => $user->id,
+                    'id_property' => $property->id,
+                    'id_paiement' => $paiement->id,
+                ]);
+
+                $this->notifierDeblocage($user, $property);
+
+                return $this->getContactInfo($user, $property, nouveau: true);
+            });
+        }
 
         // Créer paiement en attente
         $paiement = Paiement::create([
@@ -194,20 +228,41 @@ class ContactService
                 'property_id' => $paiement->id_property,
             ]);
 
-            if ($user->email) {
-                try {
-                    $user->notify(new ContactDebloqueNotification($paiement->property, $paiement->property->proprietaire));
-                } catch (\Throwable $e) {
-                    // L'envoi de l'email ne doit jamais faire échouer le déblocage du contact déjà payé.
-                    Log::error('Échec envoi email contact débloqué', [
-                        'user_id' => $user->id,
-                        'message' => $e->getMessage(),
-                    ]);
-                }
-            }
+            $this->notifierDeblocage($user, $paiement->property);
 
             return $this->getContactInfo($user, $paiement->property);
         });
+    }
+
+    /**
+     * Notifie le chercheur (coordonnées du propriétaire) et le propriétaire (chercheur intéressé)
+     * après un déblocage de contact, qu'il soit payant ou gratuit.
+     */
+    private function notifierDeblocage(User $user, Property $property): void
+    {
+        if ($user->email) {
+            try {
+                $user->notify(new ContactDebloqueNotification($property, $property->proprietaire));
+            } catch (\Throwable $e) {
+                // L'envoi de l'email ne doit jamais faire échouer le déblocage du contact déjà payé.
+                Log::error('Échec envoi email contact débloqué', [
+                    'user_id' => $user->id,
+                    'message' => $e->getMessage(),
+                ]);
+            }
+        }
+
+        $proprietaire = $property->proprietaire;
+        if ($proprietaire?->email) {
+            try {
+                $proprietaire->notify(new ContactDebloqueParChercheurNotification($property, $user));
+            } catch (\Throwable $e) {
+                Log::error('Échec envoi email propriétaire (contact débloqué)', [
+                    'proprietaire_id' => $proprietaire->id,
+                    'message'         => $e->getMessage(),
+                ]);
+            }
+        }
     }
 
     /**
@@ -222,16 +277,31 @@ class ContactService
     }
 
     /**
+     * Chercheurs ayant débloqué le contact d'un propriétaire, toutes annonces confondues.
+     */
+    public function chercheursInteresses(User $proprietaire, int $perPage = 15)
+    {
+        return AccessContact::with(['user', 'property.mediaPrincipal'])
+            ->whereHas('property', fn($q) => $q->where('id_user', $proprietaire->id))
+            ->latest()
+            ->paginate($perPage);
+    }
+
+    /**
      * Retourner les informations de contact du propriétaire
      */
-    private function getContactInfo(User $user, Property $property): array
+    private function getContactInfo(User $user, Property $property, bool $nouveau = false): array
     {
         $proprietaire = $property->proprietaire;
 
         return [
             'access'        => true,
+            // Distingue "vient d'être débloqué à l'instant" (affiche le popup de succès côté
+            // frontend) de "accès déjà existant" (juste réafficher les coordonnées).
+            'nouveau'       => $nouveau,
             'property_id'   => $property->id,
             'property_title' => $property->title,
+            'lien_maps'     => $property->lien_maps,
             'proprietaire'  => [
                 'nom'       => $proprietaire->name,
                 'telephone' => $proprietaire->phone,

@@ -4,6 +4,7 @@ namespace App\Enums;
 
 enum AbonnementType: string
 {
+    case GRATUIT    = 'gratuit';
     case MENSUEL    = 'mensuel';
     case TRIMESTRIEL = 'trimestriel';
     case SEMESTRIEL = 'semestriel';
@@ -22,6 +23,7 @@ enum AbonnementType: string
     public function dureeEnJours(): int
     {
         return match($this) {
+            self::GRATUIT     => 3650, // ~10 ans, ne doit pas expirer en pratique
             self::MENSUEL     => 30,
             self::TRIMESTRIEL => 90,
             self::SEMESTRIEL  => 180,
@@ -32,6 +34,7 @@ enum AbonnementType: string
     public function label(): string
     {
         return match($this) {
+            self::GRATUIT     => 'Gratuit',
             self::MENSUEL     => '1 mois',
             self::TRIMESTRIEL => '3 mois',
             self::SEMESTRIEL  => '6 mois',

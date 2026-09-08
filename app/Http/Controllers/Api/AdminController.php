@@ -372,6 +372,14 @@ class AdminController extends Controller
                 'deblocage_part_hohaya_pourcentage',
                 '50'
             ),
+            'deblocage_essais_gratuits' => (int) \App\Models\Setting::get(
+                'deblocage_essais_gratuits',
+                '3'
+            ),
+            'abonnement_requis' => filter_var(
+                \App\Models\Setting::get('abonnement_requis', '1'),
+                FILTER_VALIDATE_BOOLEAN
+            ),
         ], 'Paramètres récupérés.');
     }
 
@@ -430,6 +438,63 @@ class AdminController extends Controller
         return $this->sendApiResponse(
             ['deblocage_part_hohaya_pourcentage' => (float) $request->pourcentage],
             'Répartition mise à jour.'
+        );
+    }
+
+    #[OA\Patch(
+        path: '/api/admin/settings/deblocage-essais-gratuits',
+        summary: 'Modifier le nombre de déblocages de contact gratuits par chercheur',
+        security: [['sanctum' => []]],
+        tags: ['Admin'],
+        requestBody: new OA\RequestBody(required: true, content: new OA\JsonContent(
+            required: ['nombre'],
+            properties: [new OA\Property(property: 'nombre', type: 'integer', example: 3)]
+        )),
+        responses: [
+            new OA\Response(response: 200, description: 'Nombre d\'essais gratuits mis à jour'),
+            new OA\Response(response: 403, description: 'Non autorisé'),
+            new OA\Response(response: 422, description: 'Nombre invalide'),
+        ]
+    )]
+    public function updateDeblocageEssaisGratuits(Request $request): JsonResponse
+    {
+        if ($err = $this->checkAdmin($request)) return $err;
+
+        $request->validate(['nombre' => 'required|integer|min:0']);
+
+        \App\Models\Setting::set('deblocage_essais_gratuits', (string) $request->nombre, $request->user()->id);
+
+        return $this->sendApiResponse(
+            ['deblocage_essais_gratuits' => (int) $request->nombre],
+            'Nombre d\'essais gratuits mis à jour.'
+        );
+    }
+
+    #[OA\Patch(
+        path: '/api/admin/settings/abonnement-requis',
+        summary: 'Activer/désactiver l\'obligation d\'abonnement actif pour publier une annonce',
+        security: [['sanctum' => []]],
+        tags: ['Admin'],
+        requestBody: new OA\RequestBody(required: true, content: new OA\JsonContent(
+            required: ['requis'],
+            properties: [new OA\Property(property: 'requis', type: 'boolean')]
+        )),
+        responses: [
+            new OA\Response(response: 200, description: 'Réglage mis à jour'),
+            new OA\Response(response: 403, description: 'Non autorisé'),
+        ]
+    )]
+    public function updateAbonnementRequis(Request $request): JsonResponse
+    {
+        if ($err = $this->checkAdmin($request)) return $err;
+
+        $request->validate(['requis' => 'required|boolean']);
+
+        \App\Models\Setting::set('abonnement_requis', $request->boolean('requis') ? '1' : '0', $request->user()->id);
+
+        return $this->sendApiResponse(
+            ['abonnement_requis' => $request->boolean('requis')],
+            'Réglage mis à jour.'
         );
     }
 }

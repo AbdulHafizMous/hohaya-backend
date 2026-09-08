@@ -81,7 +81,6 @@ class DemoPropertiesSeeder extends Seeder
                 'description'         => "Belle {$type} située à {$commune}, {$ville['ville']}. Proche des commerces et des écoles, idéale pour étudiant. Quartier calme et sécurisé.",
                 'indications_acces'   => "Après le carrefour principal de {$commune}, suivre les indications jusqu'au portail bleu.",
                 'quartier'            => $commune,
-                'commune'             => $commune,
                 'ville'               => $ville['ville'],
                 'pays'                => 'Bénin',
                 'prix_loyer'          => $prix,

@@ -18,7 +18,7 @@ class Visite extends Model
     ];
 
     protected $fillable = [
-        'id_user', 'id_property', 'date_souhaitee',
+        'id_user', 'id_property', 'proposee_par', 'date_souhaitee',
         'message', 'status', 'note_proprietaire',
     ];
 

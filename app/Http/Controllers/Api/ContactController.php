@@ -182,4 +182,43 @@ class ContactController extends Controller
             'Historique récupéré.'
         );
     }
+
+    #[OA\Get(
+        path: '/api/owner/contacts-debloques',
+        summary: 'Chercheurs ayant débloqué mon contact (propriétaire)',
+        security: [['sanctum' => []]],
+        tags: ['Contacts'],
+        parameters: [
+            new OA\Parameter(name: 'per_page', in: 'query', required: false,
+                schema: new OA\Schema(type: 'integer', default: 15)),
+        ],
+        responses: [new OA\Response(response: 200, description: 'Chercheurs intéressés récupérés')]
+    )]
+    public function chercheursInteresses(Request $request): JsonResponse
+    {
+        $perPage = (int) $request->input('per_page', 15);
+        $result  = $this->contactService->chercheursInteresses($request->user(), $perPage);
+
+        return $this->sendApiResponse(
+            $result->through(fn($ac) => [
+                'id'          => $ac->id,
+                'chercheur'   => [
+                    'id'    => $ac->user->id,
+                    'nom'   => $ac->user->name,
+                    'email' => $ac->user->email,
+                    'phone' => $ac->user->phone,
+                ],
+                'property'    => [
+                    'id'    => $ac->property->id,
+                    'title' => $ac->property->title,
+                    'ville' => $ac->property->ville,
+                    'media_principal' => $ac->property->mediaPrincipal
+                        ? ['url' => $ac->property->mediaPrincipal->url]
+                        : null,
+                ],
+                'debloque_le' => $ac->created_at->format('d/m/Y'),
+            ]),
+            'Chercheurs intéressés récupérés.'
+        );
+    }
 }

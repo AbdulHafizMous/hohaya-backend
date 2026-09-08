@@ -25,9 +25,7 @@ Route::middleware('api')->group(function () {
         Route::post('/refresh',         [AuthController::class, 'refresh']);
         Route::post('/forgot-password', [AuthController::class, 'forgotPassword']);
         Route::post('/reset-password',  [AuthController::class, 'resetPassword'])->name('password.reset');
-        Route::get('/verify-email/{id}/{hash}', [AuthController::class, 'verifyEmail'])
-            ->name('verification.verify')
-            ->middleware('signed');
+        Route::post('/verify-email', [AuthController::class, 'verifyEmail'])->middleware('throttle:10,1');
 
         // Connexion par code (chercheurs) + 2FA (owner/admin) — throttle anti-bruteforce/spam mail
         Route::middleware('throttle:6,1')->group(function () {
@@ -120,6 +118,7 @@ Route::middleware('api')->group(function () {
         Route::post('/visites',               [ChercheurController::class, 'demanderVisite']);
         Route::get('/visites',                [ChercheurController::class, 'mesVisites']);
         Route::patch('/visites/{id}/annuler', [ChercheurController::class, 'annulerVisite']);
+        Route::patch('/visites/{id}/repondre', [ChercheurController::class, 'repondreVisiteChercheur']);
     });
 
     // ── Propriétaire — gestion des visites reçues ─────────────────────────────
@@ -128,6 +127,8 @@ Route::middleware('api')->group(function () {
         Route::patch('/visites/{id}/repondre',  [ChercheurController::class, 'repondreVisite']);
         Route::get('/locataires',               [ReservationController::class, 'locatairesProprietaire']);
         Route::get('/revenus-contacts',         [PaiementController::class, 'revenusContacts']);
+        Route::get('/contacts-debloques',       [ContactController::class, 'chercheursInteresses']);
+        Route::post('/visites',                 [ChercheurController::class, 'proposerVisite']);
     });
 
     // ── Support tickets ───────────────────────────────────────────────────────
@@ -186,5 +187,7 @@ Route::middleware('api')->group(function () {
         Route::get('/settings',                    [AdminController::class, 'settings']);
         Route::patch('/settings/deblocage-prix',    [AdminController::class, 'updateDeblocagePrix']);
         Route::patch('/settings/deblocage-part-hohaya', [AdminController::class, 'updateDeblocagePartHohaya']);
+        Route::patch('/settings/deblocage-essais-gratuits', [AdminController::class, 'updateDeblocageEssaisGratuits']);
+        Route::patch('/settings/abonnement-requis', [AdminController::class, 'updateAbonnementRequis']);
     });
 });

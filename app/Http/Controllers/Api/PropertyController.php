@@ -29,9 +29,6 @@ class PropertyController extends Controller
             new OA\Parameter(name: 'quartier', in: 'query', required: false,
                 description: 'Filtrer par quartier',
                 schema: new OA\Schema(type: 'string')),
-            new OA\Parameter(name: 'commune', in: 'query', required: false,
-                description: 'Filtrer par commune',
-                schema: new OA\Schema(type: 'string')),
             new OA\Parameter(name: 'type_logement', in: 'query', required: false,
                 description: 'Type de logement',
                 schema: new OA\Schema(type: 'string', enum: PropertyType::class)),
@@ -55,7 +52,7 @@ class PropertyController extends Controller
     )]
     public function index(Request $request): JsonResponse
     {
-        $filters    = $request->only(['pays', 'ville', 'quartier', 'commune', 'type_logement', 'prix_min', 'prix_max', 'nb_pieces', 'meuble']);
+        $filters    = $request->only(['pays', 'ville', 'quartier', 'type_logement', 'prix_min', 'prix_max', 'nb_pieces', 'meuble']);
         $perPage    = (int) $request->input('per_page', 15);
         $properties = $this->propertyService->list($filters, $perPage);
 
@@ -141,7 +138,6 @@ class PropertyController extends Controller
                         example: 'Après le carrefour Total, 2ème rue à droite',
                         description: 'Indications pour trouver le logement (pas toujours d\'adresse précise)'),
                     new OA\Property(property: 'quartier', type: 'string', example: 'Cadjehoun'),
-                    new OA\Property(property: 'commune', type: 'string', nullable: true, example: 'Littoral'),
                     new OA\Property(property: 'ville', type: 'string', example: 'Cotonou'),
                     new OA\Property(property: 'pays', type: 'string', example: 'Bénin',
                         description: 'Pays (défaut: Bénin)'),
@@ -217,7 +213,6 @@ class PropertyController extends Controller
                     new OA\Property(property: 'description', type: 'string', example: 'Description mise à jour...'),
                     new OA\Property(property: 'indications_acces', type: 'string', nullable: true),
                     new OA\Property(property: 'quartier', type: 'string', example: 'Cadjehoun'),
-                    new OA\Property(property: 'commune', type: 'string', nullable: true),
                     new OA\Property(property: 'ville', type: 'string', example: 'Cotonou'),
                     new OA\Property(property: 'pays', type: 'string', example: 'Bénin'),
                     new OA\Property(property: 'prix_loyer', type: 'number', example: 80000),

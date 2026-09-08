@@ -176,6 +176,7 @@ class ReservationService
             return [
                 'property_id'    => $paiement->property->id,
                 'property_title' => $paiement->property->title,
+                'lien_maps'      => $paiement->property->lien_maps,
                 'message'        => 'Réservation confirmée. Le propriétaire va vous contacter pour finaliser la location.',
             ];
         });

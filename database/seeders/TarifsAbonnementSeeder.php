@@ -12,6 +12,13 @@ class TarifsAbonnementSeeder extends Seeder
     {
         $tarifs = [
             [
+                'type'        => AbonnementType::GRATUIT->value,
+                'montant'     => 0,
+                'devise'      => 'XOF',
+                'is_actif'    => true,
+                'description' => 'Abonnement gratuit — accès complet sans frais',
+            ],
+            [
                 'type'        => AbonnementType::MENSUEL->value,
                 'montant'     => 5000,
                 'devise'      => 'XOF',
