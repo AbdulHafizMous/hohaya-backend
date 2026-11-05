@@ -233,6 +233,30 @@ class ChercheurService
         return $visite->fresh();
     }
 
+    /**
+     * Le chercheur marque la visite comme effectivement reçue/faite.
+     * Ne peut se faire que sur une visite confirmée.
+     */
+    public function marquerVisiteRecue(User $user, int $visiteId): Visite
+    {
+        $visite = Visite::where('id', $visiteId)->where('id_user', $user->id)->first();
+
+        if (!$visite) {
+            throw ValidationException::withMessages([
+                'visite' => ['Visite introuvable.'],
+            ]);
+        }
+
+        if ($visite->status !== 'confirmée') {
+            throw ValidationException::withMessages([
+                'visite' => ['Seules les visites confirmées peuvent être marquées comme reçues.'],
+            ]);
+        }
+
+        $visite->update(['status' => 'reçue']);
+        return $visite->fresh();
+    }
+
     public function visitesRecues(User $user, int $perPage = 15): LengthAwarePaginator
     {
         return Visite::with(['user', 'property'])

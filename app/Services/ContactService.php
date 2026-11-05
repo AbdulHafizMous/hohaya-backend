@@ -36,14 +36,28 @@ class ContactService
             return $user;
         }
 
+        $plainPassword = Str::random(12);
+
         $user = User::create([
             'name'     => $data['name'],
             'email'    => $data['email'] ?? null,
             'phone'    => $data['phone'] ?? null,
-            'password' => Hash::make(Str::random(32)),
+            'password' => Hash::make($plainPassword),
         ]);
 
         $user->assignRole('seeker');
+
+        // Envoyer le mot de passe temporaire par email si l'utilisateur a un email
+        if ($user->email) {
+            try {
+                $user->notify(new \App\Notifications\CompteCreéAutomatiquementNotification(
+                    $plainPassword,
+                    rtrim(env('FRONTEND_URL', 'http://localhost:3001'), '/')
+                ));
+            } catch (\Throwable $e) {
+                \Illuminate\Support\Facades\Log::error('Échec envoi email compte auto', ['error' => $e->getMessage()]);
+            }
+        }
 
         return $user;
     }

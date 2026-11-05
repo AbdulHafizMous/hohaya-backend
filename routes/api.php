@@ -118,7 +118,8 @@ Route::middleware('api')->group(function () {
         Route::post('/visites',               [ChercheurController::class, 'demanderVisite']);
         Route::get('/visites',                [ChercheurController::class, 'mesVisites']);
         Route::patch('/visites/{id}/annuler', [ChercheurController::class, 'annulerVisite']);
-        Route::patch('/visites/{id}/repondre', [ChercheurController::class, 'repondreVisiteChercheur']);
+        Route::patch('/visites/{id}/repondre',      [ChercheurController::class, 'repondreVisiteChercheur']);
+        Route::patch('/visites/{id}/marquer-recue', [ChercheurController::class, 'marquerVisiteRecue']);
     });
 
     // ── Propriétaire — gestion des visites reçues ─────────────────────────────
@@ -128,7 +129,7 @@ Route::middleware('api')->group(function () {
         Route::get('/locataires',               [ReservationController::class, 'locatairesProprietaire']);
         Route::get('/revenus-contacts',         [PaiementController::class, 'revenusContacts']);
         Route::get('/contacts-debloques',       [ContactController::class, 'chercheursInteresses']);
-        Route::post('/visites',                 [ChercheurController::class, 'proposerVisite']);
+        // POST /owner/visites retiré : c'est le chercheur qui propose la visite, pas le propriétaire
     });
 
     // ── Support tickets ───────────────────────────────────────────────────────

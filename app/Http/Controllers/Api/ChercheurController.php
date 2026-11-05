@@ -211,6 +211,20 @@ class ChercheurController extends Controller
         }
     }
 
+    public function marquerVisiteRecue(Request $request, int $id): JsonResponse
+    {
+        try {
+            $visite = $this->chercheurService->marquerVisiteRecue($request->user(), $id);
+            return $this->sendApiResponse(
+                $this->chercheurService->formatVisite($visite),
+                'Visite marquée comme reçue.'
+            );
+        } catch (ValidationException $e) {
+            $errors = $e->errors();
+            return $this->sendApiResponse(['errors' => $errors], current($errors)[0], false, 422);
+        }
+    }
+
     // ── Côté propriétaire ─────────────────────────────────────────────
 
     #[OA\Get(

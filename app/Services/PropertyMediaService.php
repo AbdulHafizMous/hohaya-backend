@@ -77,6 +77,11 @@ class PropertyMediaService
             ]);
         }
 
+        // Publier l'annonce automatiquement dès qu'elle a au moins une image.
+        if (!$property->is_verified && $property->fresh()->medias()->where('type', 'image')->exists()) {
+            $property->update(['is_verified' => true]);
+        }
+
         return $property->fresh(['medias', 'mediaPrincipal', 'proprietaire']);
     }
 

@@ -50,8 +50,11 @@ class UploadMediasRequest extends FormRequest
 
     public function rules(): array
     {
+        $type = $this->input('type');
+        $maxKb = $type === 'video' ? 40960 : 10240; // vidéo: 40MB, image: 10MB
+
         return [
-            'fichier'       => ['required', 'file', 'max:51200'], // 50MB
+            'fichier'       => ['required', 'file', "max:{$maxKb}"],
             'type'          => ['required', MediaType::rule()],
             'zone'          => ['required', PropertyZone::rule()],
             'description'   => ['sometimes', 'nullable', 'string', 'max:255'],
@@ -64,7 +67,7 @@ class UploadMediasRequest extends FormRequest
         return [
             'fichier.required' => 'Le fichier est obligatoire.',
             'fichier.file'     => 'Le champ doit être un fichier valide.',
-            'fichier.max'      => 'Le fichier ne doit pas dépasser 50 Mo.',
+            'fichier.max'      => 'Le fichier est trop lourd. Taille maximale : 40 Mo pour les vidéos, 10 Mo pour les images.',
 
             'type.required'    => 'Le type (image/video) est obligatoire.',
             'type.in'          => 'Type invalide. Valeurs : ' . implode(', ', MediaType::values()),

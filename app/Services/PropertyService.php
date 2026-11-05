@@ -92,8 +92,7 @@ class PropertyService
             'type_logement'       => \App\Enums\PropertyType::CHAMBRE->value,
             'condition'           => $data['condition'],
             'nb_avance'           => $data['nb_avance'] ?? 3,
-            'caution_electricite' => $data['caution_electricite'] ?? null,
-            'caution_eau'         => $data['caution_eau'] ?? null,
+            'caution_mois'        => $data['caution_mois'] ?? 0,
             'nb_pieces'           => $data['nb_pieces'],
             'date_debut_louer'    => $data['date_debut_louer'] ?? null,
             'eau_courante'        => $data['eau_courante'] ?? true,
@@ -102,8 +101,8 @@ class PropertyService
             'parking'             => $data['parking'] ?? false,
             'meuble'              => $data['meuble'] ?? false,
             'status'              => PropertyStatus::DISPONIBLE->value,
-            // Publication automatique : visible immédiatement en recherche/accueil, pas de modération manuelle requise.
-            'is_verified'         => true,
+            // L'annonce n'est publiée qu'après l'ajout d'au moins une photo (voir PropertyMediaService::upload).
+            'is_verified'         => false,
             'created_by'          => $user->id,
         ]);
 
@@ -195,8 +194,7 @@ class PropertyService
             'type_logement'       => $property->type_logement,
             'condition'           => $property->condition,
             'nb_avance'           => $property->nb_avance,
-            'caution_electricite' => $property->caution_electricite,
-            'caution_eau'         => $property->caution_eau,
+            'caution_mois'        => $property->caution_mois ?? 0,
             'nb_pieces'           => $property->nb_pieces,
             'eau_courante'        => $property->eau_courante,
             'electricite'         => $property->electricite,
